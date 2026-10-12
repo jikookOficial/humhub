@@ -4,6 +4,7 @@ namespace tests\codeception\unit\models;
 
 use humhub\modules\user\models\User;
 use humhub\modules\user\Module;
+use humhub\modules\user\permissions\PeopleAccess;
 use humhub\modules\user\permissions\ViewAboutPage;
 use tests\codeception\_support\HumHubDbTestCase;
 
@@ -14,27 +15,27 @@ class UserModuleTest extends HumHubDbTestCase
         $module = new Module('user');
 
         $this->assertEquals([new ViewAboutPage()], $module->getPermissions(new User()));
-        $this->assertEquals([], $module->getPermissions());
+        $this->assertEquals([new PeopleAccess()], $module->getPermissions());
 
         $this->assertEquals('User', $module->getName());
 
         $this->assertEquals([
             'humhub\modules\user\notifications\Followed',
-            'humhub\modules\user\notifications\Mentioned'
+            'humhub\modules\user\notifications\Mentioned',
         ], $module->getNotifications());
 
         $this->assertEquals([
-            '/^.{5,255}$/' => 'Password needs to be at least 8 characters long.',
+            '/^.{5,255}$/' => 'Password needs to be at least 5 characters long.',
         ], $module->getPasswordStrength());
 
         $module->passwordStrength = [
-            '/^$/' => 'test'
+            '/^$/' => 'test',
         ];
 
         $this->assertTrue($module->isCustomPasswordStrength());
 
         $this->assertEquals([
-            '/^$/' => 'test'
+            '/^$/' => 'test',
         ], $module->getPasswordStrength());
     }
 }

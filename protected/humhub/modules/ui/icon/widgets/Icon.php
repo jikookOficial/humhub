@@ -1,11 +1,15 @@
 <?php
+
 namespace humhub\modules\ui\icon\widgets;
 
 use humhub\components\Widget;
-use Yii;
-use humhub\libs\Html;
-use humhub\modules\ui\icon\components\IconProvider;
+use humhub\helpers\Html;
 use humhub\modules\ui\icon\components\IconFactory;
+use humhub\modules\ui\icon\components\IconProvider;
+use humhub\modules\ui\Module;
+use Throwable;
+use Yii;
+use yii\base\InvalidConfigException;
 
 /**
  * The Icon widget is used as abstraction layer for rendering icons.
@@ -32,20 +36,20 @@ use humhub\modules\ui\icon\components\IconFactory;
  * @see IconProvider
  * @since 1.4
  */
-class Icon extends Widget
+class Icon extends Widget implements \Stringable
 {
-    const SIZE_XS = 'xs';
-    const SIZE_SM = 'sm';
-    const SIZE_LG = 'lg';
-    const SIZE_2x = '2x';
-    const SIZE_3x = '3x';
-    const SIZE_4x = '4x';
-    const SIZE_5x = '5x';
-    const SIZE_6x = '6x';
-    const SIZE_7x = '7x';
-    const SIZE_8x = '8x';
-    const SIZE_9x = '9x';
-    const SIZE_10x = '10x';
+    public const SIZE_XS = 'xs';
+    public const SIZE_SM = 'sm';
+    public const SIZE_LG = 'lg';
+    public const SIZE_2x = '2x';
+    public const SIZE_3x = '3x';
+    public const SIZE_4x = '4x';
+    public const SIZE_5x = '5x';
+    public const SIZE_6x = '6x';
+    public const SIZE_7x = '7x';
+    public const SIZE_8x = '8x';
+    public const SIZE_9x = '9x';
+    public const SIZE_10x = '10x';
 
     /**
      * @var array contains all available names which should be supported by the main icon provider
@@ -386,6 +390,8 @@ class Icon extends Widget
         'mars-stroke',
         'mars-stroke-h',
         'mars-stroke-v',
+        'mastodon',
+        'mastodon-square',
         'maxcdn',
         'meanpath',
         'medium',
@@ -631,7 +637,7 @@ class Icon extends Widget
         'yelp',
         'youtube',
         'youtube-play',
-        'youtube-square'
+        'youtube-square',
     ];
 
     /**
@@ -670,10 +676,10 @@ class Icon extends Widget
     public $border = false;
 
     /**
-     * Set this to true if the icon is only used for decoration and is not required for navigating your site.
-     * @var bool used for accessibility, set this to true if the icon is just used as decoration and
+     * @var string aria-label
+     * @var since 1.7
      */
-    public $ariaHidden = false;
+    public $ariaLabel;
 
     /**
      * @var array
@@ -686,10 +692,15 @@ class Icon extends Widget
     public $color;
 
     /**
+     * @var string a tooltip text
+     * @since 1.7
+     */
+    public $tooltip;
+
+    /**
      * @var string explicitly define a icon library, if not defined the default icon provider is used
      */
     public $lib;
-
 
     /**
      * Can be used to get an Icon instance from an unknown format.
@@ -717,12 +728,16 @@ class Icon extends Widget
      */
     public static function get($icon, $options = [])
     {
-        if($icon instanceof static) {
+        if ($icon instanceof static) {
             return Yii::configure($icon, $options);
-        } else if(is_string($icon)) {
+        }
+
+        if (is_string($icon)) {
             $options['name'] = $icon;
             return new Icon($options);
-        } else if(is_array($icon)) {
+        }
+
+        if (is_array($icon)) {
             return new Icon($icon);
         }
 
@@ -734,8 +749,8 @@ class Icon extends Widget
      *
      * @param null $providerId
      * @return string[]
+     * @throws InvalidConfigException
      * @see IconFactory::getNames()
-     * @throws \yii\base\InvalidConfigException
      */
     public static function getNames($providerId = null)
     {
@@ -754,7 +769,7 @@ class Icon extends Widget
      *
      * @param $listDefinition
      * @return mixed
-     * @throws \yii\base\InvalidConfigException
+     * @throws InvalidConfigException
      */
     public static function renderList($listDefinition)
     {
@@ -763,47 +778,50 @@ class Icon extends Widget
 
     /**
      * @inheritdoc
-     * @throws \yii\base\InvalidConfigException
+     * @throws InvalidConfigException
      */
     public function run()
     {
         /**
          * Catch for legacy icon usage
          */
-        $this->name = (strpos($this->name, 'fa-') === 0)
+        $this->name = (str_starts_with($this->name, 'fa-'))
             ? substr($this->name, 3, strlen($this->name))
             : $this->name;
 
-        if($this->color) {
-            switch($this->color) {
+        if ($this->color) {
+            switch ($this->color) {
                 case 'default':
-                    $this->color = $this->view->theme->variable('default');
+                    $this->color = 'var(--bs-default)';
                     break;
                 case 'primary':
-                    $this->color = $this->view->theme->variable('primary');
+                    $this->color = 'var(--bs-primary)';
                     break;
                 case 'info':
-                    $this->color = $this->view->theme->variable('info');
+                    $this->color = 'var(--bs-info)';
                     break;
                 case 'success':
-                    $this->color = $this->view->theme->variable('success');
+                    $this->color = 'var(--bs-success)';
                     break;
                 case 'warning':
                 case 'warn':
-                    $this->color = $this->view->theme->variable('warn');
+                    $this->color = 'var(--bs-warning)';
                     break;
-
                 case 'error':
                 case 'danger':
-                    $this->color = $this->view->theme->variable('danger');
+                    $this->color = 'var(--bs-danger)';
                     break;
-
+                case 'accent':
+                    $this->color = 'var(--bs-accent)';
+                    break;
             }
         }
 
-        if($this->getId(false)) {
+        if ($this->getId(false)) {
             $this->htmlOptions['id'] = $this->id;
         }
+
+        $this->name = Module::getModuleInstance()->getIconAlias($this->name);
 
         return IconFactory::getInstance()->render($this);
     }
@@ -815,6 +833,34 @@ class Icon extends Widget
     public function size($size)
     {
         $this->size = $size;
+        return $this;
+    }
+
+    /**
+     * @param $size string
+     * @return $this
+     * @since 1.7
+     */
+    public function ariaLabel($ariaLabel)
+    {
+        $this->ariaLabel = $ariaLabel;
+        return $this;
+    }
+
+    /**
+     * @param string tooltip text
+     * @param string $ariaLabel additional aria-label information (tooltip text is used as fallback)
+     * @return $this
+     * @since 1.7
+     */
+    public function tooltip($tooltip, $ariaLabel = null)
+    {
+        $this->tooltip = $tooltip;
+        if ($ariaLabel) {
+            $this->ariaLabel = $ariaLabel;
+        } elseif (!$this->ariaLabel) {
+            $this->ariaLabel = $tooltip;
+        }
         return $this;
     }
 
@@ -844,7 +890,7 @@ class Icon extends Widget
      */
     public function right($active = true)
     {
-        if($active) {
+        if ($active) {
             $this->left(false);
         }
 
@@ -858,20 +904,11 @@ class Icon extends Widget
      */
     public function left($active = true)
     {
-        if($active) {
+        if ($active) {
             $this->right(false);
         }
 
         $this->left = $active;
-        return $this;
-    }
-
-    /**
-     * @param bool $active
-     */
-    public function ariaHidden($active = true)
-    {
-        $this->ariaHidden = $active;
         return $this;
     }
 
@@ -887,6 +924,7 @@ class Icon extends Widget
 
     /**
      * @param string|array $style
+     * @return $this
      */
     public function style($style)
     {
@@ -895,7 +933,19 @@ class Icon extends Widget
     }
 
     /**
+     * @param string $class
+     * @return $this
+     * @since 1.16
+     */
+    public function class(string $class): self
+    {
+        Html::addCssClass($this->htmlOptions, $class);
+        return $this;
+    }
+
+    /**
      * @param string $color
+     * @return $this
      */
     public function color($color)
     {
@@ -926,31 +976,41 @@ class Icon extends Widget
             'listItem' => $this->listItem,
             'right' => $this->right,
             'left' => $this->left,
-            'ariaHidden' => $this->ariaHidden,
+            'tooltip' => $this->tooltip,
+            'ariaLabel' => $this->ariaLabel,
             'border' => $this->border,
             'htmlOptions' => $this->htmlOptions,
             'color' => $this->color,
-            'lib' => $this->lib
+            'lib' => $this->lib,
         ];
     }
 
     /**
      * @return string
-     * @throws \Exception
      */
     public function asString()
     {
-        return (string) $this;
+        try {
+            return (string)$this;
+        } catch (Throwable $e) {
+            Yii::error($e);
+        }
+
+        return '';
     }
 
     /**
      * @return string
-     * @throws \Exception
      */
-    public function __toString()
+    public function __toString(): string
     {
-        $result = $this::widget($this->asArray());
+        try {
+            $result = $this::widget($this->asArray());
+            return $result ?: '';
+        } catch (Throwable $e) {
+            Yii::error($e);
+        }
 
-        return $result ? $result : '';
+        return '';
     }
 }

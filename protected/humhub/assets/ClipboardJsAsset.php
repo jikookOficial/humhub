@@ -17,15 +17,18 @@ use humhub\components\assets\AssetBundle;
  */
 class ClipboardJsAsset extends AssetBundle
 {
+    /**
+     * @inheritdoc
+     */
+    public $sourcePath = '@npm/clipboard-polyfill/dist/main';
 
     /**
      * @inheritdoc
      */
-    public $sourcePath = '@npm/clipboard-polyfill';
+    public $js = ['clipboard-polyfill.js'];
 
-    /**
-     * @inheritdoc
-     */
-    public $js = ['dist/clipboard-polyfill.js'];
+    public $publishOptions = [
+        'only' => ['clipboard-polyfill.js', 'clipboard-polyfill.js.map'],
+    ];
 
 }

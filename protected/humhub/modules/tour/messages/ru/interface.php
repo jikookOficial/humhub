@@ -1,5 +1,5 @@
-<?php
+<?php /* Translated by Paul (https://paul.bid) www.paul.bid@gmail.com */
 return array (
-  '<strong>Dashboard</strong>' => '<strong>Главная</strong>',
-  'This is your dashboard.<br><br>Any new activities or posts that might interest you will be displayed here.' => 'Это ваша главная страница. <br>Все новые действия, которые могут представлять для вас интерес, будут отображаться здесь.',
+  '<strong>Dashboard</strong>' => '<strong>Домашняя страница</strong>',
+  'This is your dashboard.<br><br>Any new activities or posts that might interest you will be displayed here.' => 'Это ваша домашняя страница.<br><br>Здесь будут отображаться всякие новые действия и события, которые могут вас заинтересовать.',
 );

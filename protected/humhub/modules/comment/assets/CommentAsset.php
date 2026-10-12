@@ -12,7 +12,6 @@ use humhub\components\assets\AssetBundle;
 
 class CommentAsset extends AssetBundle
 {
-
     /**
      * @inheritdoc
      */
@@ -22,6 +21,6 @@ class CommentAsset extends AssetBundle
      * @inheritdoc
      */
     public $js = [
-        'js/humhub.comment.js'
+        'js/humhub.comment.js',
     ];
 }

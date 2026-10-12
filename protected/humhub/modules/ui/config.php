@@ -1,13 +1,10 @@
 <?php
 
-use humhub\components\console\Application;
+use humhub\modules\ui\Module;
 
 /** @noinspection MissedFieldInspection */
 return [
     'id' => 'ui',
-    'class' => \humhub\modules\ui\Module::class,
+    'class' => Module::class,
     'isCoreModule' => true,
-    'events' => [
-        [Application::class, Application::EVENT_ON_INIT, ['humhub\modules\ui\Events', 'onConsoleApplicationInit']],
-    ]
 ];

@@ -12,8 +12,9 @@ use humhub\components\Event;
 use humhub\libs\Sort;
 use humhub\modules\ui\menu\MenuEntry;
 use humhub\modules\ui\menu\MenuLink;
+use humhub\widgets\BaseStack;
 use humhub\widgets\JsWidget;
-use Yii;
+use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\View;
 
@@ -28,7 +29,7 @@ abstract class Menu extends JsWidget
     /**
      * @event MenuEvent an event raised before running the navigation widget.
      */
-    const EVENT_RUN = 'run';
+    public const EVENT_RUN = 'run';
 
     /**
      * @var string template view file of the navigation
@@ -54,7 +55,7 @@ abstract class Menu extends JsWidget
      * Removes the entry from the navigation
      *
      * @param MenuEntry $entry
-     * @return boolean
+     * @return bool
      */
     public function removeEntry($entry)
     {
@@ -81,13 +82,6 @@ abstract class Menu extends JsWidget
             return '';
         }
 
-        if ($this->template === '@humhub/widgets/views/leftNavigation') {
-            Yii::debug('Deprecated usage of leftNavigation view!');
-            $this->template = '@ui/menu/widgets/views/left-navigation.php';
-        }
-
-
-
         return $this->render($this->template, $this->getViewParams());
     }
 
@@ -102,9 +96,6 @@ abstract class Menu extends JsWidget
             'menu' => $this,
             'entries' => $this->getSortedEntries(),
             'options' => $this->getOptions(),
-            // Deprecated
-            'items' => $this->getItems(),
-            'numItems' => count($this->getItems())
         ];
     }
 
@@ -115,7 +106,7 @@ abstract class Menu extends JsWidget
      */
     public function getSortedEntries()
     {
-        return Sort::sort($this->entries);
+        return Sort::sort($this->entries, 'sortOrder', BaseStack::DEFAULT_SORT_ORDER);
     }
 
     /**
@@ -124,7 +115,7 @@ abstract class Menu extends JsWidget
     public function getData()
     {
         return [
-            'menu-id' => $this->id
+            'menu-id' => $this->id,
         ];
     }
 
@@ -141,7 +132,7 @@ abstract class Menu extends JsWidget
         }
 
         foreach ($this->entries as $entry) {
-            if(!$entry instanceof MenuLink) {
+            if (!$entry instanceof MenuLink) {
                 continue;
             }
 
@@ -162,7 +153,7 @@ abstract class Menu extends JsWidget
     public function getEntryById($id)
     {
         foreach ($this->entries as $entry) {
-            if(!$entry instanceof MenuEntry) {
+            if (!$entry instanceof MenuEntry) {
                 continue;
             }
 
@@ -201,57 +192,6 @@ abstract class Menu extends JsWidget
     }
 
     /**
-     * -------------------------------------------------------------------
-     *                       Compatibility Layer
-     * -------------------------------------------------------------------
-     */
-
-    /**
-     * @deprecated since 1.4
-     * @param array $entryArray
-     */
-    public function addItem($entryArray)
-    {
-        $entry = MenuLink::createByArray($entryArray);
-        $this->addEntry($entry);
-    }
-
-    /**
-     * @deprecated since 1.4 not longer supported!
-     * @return array item group
-     */
-    public function addItemGroup($itemGroup)
-    {
-        //throw new InvalidCallException('Item groups are not longer supported');
-    }
-
-    /**
-     * @deprecated since 1.4
-     * @return array the item group
-     */
-    public function getItemGroups()
-    {
-        return [
-            ['id' => 'default', 'label' => '', 'icon' => '', 'sortOrder' => 1000]
-        ];
-    }
-
-    /**
-     * @deprecated since 1.4
-     * @return array the menu items as array list
-     */
-    public function getItems($group = '')
-    {
-        $items = [];
-        foreach ($this->entries as $entry) {
-            if($entry instanceof MenuLink) {
-                $items[] = $entry->toArray();
-            }
-        }
-        return $items;
-    }
-
-    /**
      * Returns all entries filtered by $type. If no $type filter is given all entries
      * are returned.
      *
@@ -265,7 +205,7 @@ abstract class Menu extends JsWidget
     {
         $result = [];
         foreach ($this->getSortedEntries() as $entry) {
-            if((!$filterVisible || $entry->isVisible()) && (!$type || get_class($entry) === $type || is_subclass_of($entry, $type))) {
+            if ((!$filterVisible || $entry->isVisible()) && (!$type || $entry::class === $type || is_subclass_of($entry, $type))) {
                 $result[] = $entry;
             }
         }
@@ -281,7 +221,7 @@ abstract class Menu extends JsWidget
     public function getFirstEntry($type = null, $filterVisible = false)
     {
         $entries = $this->getEntries($type, $filterVisible);
-        if(count($entries)) {
+        if (count($entries)) {
             return $entries[0];
         }
 
@@ -338,7 +278,7 @@ abstract class Menu extends JsWidget
      */
     public static function markAsActive($searchStr)
     {
-        Event::on(static::class, static::EVENT_RUN, function ($event) use ($searchStr) {
+        Event::on(static::class, static::EVENT_RUN, function ($event) use ($searchStr): void {
             $event->sender->setActive($searchStr);
         });
     }
@@ -348,47 +288,41 @@ abstract class Menu extends JsWidget
      */
     public static function markAsInactive($url)
     {
-        Event::on(static::class, static::EVENT_RUN, function ($event) use ($url) {
+        Event::on(static::class, static::EVENT_RUN, function ($event) use ($url): void {
             $event->sender->setInactive($url);
         });
     }
 
     /**
-     * @deprecated since 1.4
-     * @return array the menu entry as array
+     * Tells the client which entry is active for the current request.
+     *
+     * Needed for pjax navigations: the menu sits outside the pjax container and is not
+     * re-rendered by them, so without this it keeps the entry the previous page marked - the
+     * dashboard stays highlighted after moving into a space, for example. The counterpart is
+     * `humhub.ui.navigation.setActive()`, which moves the highlight or, for a page with no
+     * active entry, clears it.
+     *
+     * @since 1.19
      */
-    public function getActive()
+    public static function registerActiveState(): void
     {
-        $activeEntry = $this->getActiveEntry();
-        if ($activeEntry && $activeEntry instanceof MenuLink) {
-            return $activeEntry->toArray();
+        $menu = new static();
+
+        if (empty($menu->id)) {
+            return;
         }
 
-        return null;
-    }
+        $activeEntry = $menu->getActiveEntry();
+        $active = $activeEntry instanceof MenuLink
+            ? ['id' => $activeEntry->getId(), 'url' => $activeEntry->getUrl()]
+            : null;
 
-    /**
-     * @deprecated since 1.4
-     * @param $url string the URL or route
-     */
-    public function deleteItemByUrl($url)
-    {
-        $entry = $this->getEntryByUrl($url);
-        if ($entry) {
-            $this->removeEntry($entry);
-        }
-    }
-
-    /**
-     * @deprecated since 1.4
-     */
-    public static function setViewState()
-    {
-        $instance = new static();
-        if (!empty($instance->id)) {
-            $active = $instance->getActive();
-            $instance->view->registerJs('humhub.modules.ui.navigation.setActive("' . $instance->id . '", ' . json_encode($active) . ');', View::POS_END, 'active-' . $instance->id);
-        }
+        $menu->getView()->registerJs(
+            'humhub.modules.ui.navigation.setActive('
+            . Json::htmlEncode($menu->id) . ', ' . Json::htmlEncode($active) . ');',
+            View::POS_END,
+            'active-' . $menu->id,
+        );
     }
 
 }

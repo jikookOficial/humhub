@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @link https://www.humhub.org/
  * @copyright Copyright (c) 2018 HumHub GmbH & Co. KG
@@ -7,6 +8,7 @@
 
 namespace user\acceptance;
 
+use Exception;
 use tests\codeception\_pages\DirectoryMemberPage;
 use user\AcceptanceTester;
 
@@ -14,7 +16,7 @@ class InviteCest
 {
     /**
      * @param AcceptanceTester $I
-     * @throws \Exception
+     * @throws Exception
      */
     public function testDashboardInviteByMail(AcceptanceTester $I)
     {
@@ -23,18 +25,18 @@ class InviteCest
         $I->amUser();
         DirectoryMemberPage::openBy($I);
 
-        $I->click('Send invite');
-        $I->waitForText('Invite new people', null, '#globalModal');
+        $I->click('Invite new people');
+        $I->waitForText('Invite new people', 10, '#globalModal');
 
         $I->amGoingTo('invite an already existing user email');
         $I->fillField('#emails', 'user1@example.com');
-        $I->click('Send invite');
+        $I->click('Send invite', '#globalModal');
         $I->expectTo('see an error message');
         $I->waitForText('user1@example.com is already registered!');
 
         $I->amGoingTo('invite an non existing user email');
         $I->fillField('#emails', 'user1234@example.com');
-        $I->click('Send invite');
+        $I->click('Send invite', '#globalModal');
         $I->expectTo('see a confirm message');
         $I->seeSuccess();
     }

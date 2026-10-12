@@ -11,7 +11,7 @@ namespace humhub\modules\ui\menu\widgets;
 /**
  * SubTabMenu
  *
- * @sicne 1.4
+ * @since 1.4
  * @package humhub\modules\ui\menu\widgets
  */
 abstract class SubTabMenu extends TabMenu
@@ -32,7 +32,7 @@ abstract class SubTabMenu extends TabMenu
     public function getAttributes()
     {
         return [
-            'class' => 'nav nav-tabs tab-sub-menu'
+            'class' => 'nav nav-tabs tab-sub-menu',
         ];
     }
 

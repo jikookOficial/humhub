@@ -8,12 +8,11 @@
 
 namespace humhub\modules\web\pwa\widgets;
 
-use Yii;
-use yii\base\WidgetEvent;
-use yii\helpers\Url;
+use humhub\components\View;
 use humhub\components\Widget;
-use humhub\modules\ui\Module;
-use humhub\modules\ui\view\components\View;
+use humhub\modules\web\Module;
+use Yii;
+use yii\helpers\Url;
 
 /**
  * Class LayoutHeader
@@ -22,7 +21,6 @@ use humhub\modules\ui\view\components\View;
  */
 class LayoutHeader extends Widget
 {
-
     /**
      * Registers mobile app related Head Tags
      *
@@ -30,36 +28,44 @@ class LayoutHeader extends Widget
      */
     public static function registerHeadTags(View $view)
     {
+
         $view->registerMetaTag(['name' => 'theme-color', 'content' => Yii::$app->view->theme->variable('primary')]);
         $view->registerMetaTag(['name' => 'application-name', 'content' => Yii::$app->name]);
 
         // Apple/IOS headers
         // https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html
         $view->registerMetaTag(['name' => 'apple-mobile-web-app-title', 'content' => Yii::$app->name]);
-        $view->registerMetaTag(['name' => 'apple-mobile-web-app-capable', 'content' => 'yes']);
+        $view->registerMetaTag(['name' => 'mobile-web-app-capable', 'content' => 'yes']);
         $view->registerMetaTag(['name' => 'apple-mobile-web-app-status-bar-style', 'content' => Yii::$app->view->theme->variable('primary')]);
 
         $view->registerLinkTag(['rel' => 'manifest', 'href' => Url::to(['/web/pwa-manifest/index'])]);
 
+        /** @var Module $module */
+        $module = Yii::$app->getModule('web');
+        if ($module->enableServiceWorker !== false) {
+            static::registerServiceWorker($view);
+        }
+    }
 
-        $cacheId = Yii::$app->cache->getOrSet('service-worker-cache-id', function () {
-            return time();
-        });
+    private static function registerServiceWorker(View $view)
+    {
+        $cacheId = Yii::$app->cache->getOrSet('service-worker-cache-id', fn() => time());
         $serviceWorkUrl = Url::to(['/web/pwa-service-worker/index', 'v' => $cacheId]);
-
-
         $rootPath = Yii::getAlias('@web') . '/';
+
         $view->registerJs(<<<JS
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('$serviceWorkUrl', { scope: '$rootPath' })
                     .then(function (registration) {
-                        if (typeof afterServiceWorkerRegistration === "function") { 
+                        if (typeof afterServiceWorkerRegistration === "function") {
+                            // Allow Modules like `fcm-push` to register after registration
                             afterServiceWorkerRegistration(registration);
                         }
                     })
             }
 JS
             , View::POS_READY, 'serviceWorkerInit');
+
     }
 
 }

@@ -9,9 +9,10 @@
 namespace humhub\components\behaviors;
 
 use humhub\components\access\ControllerAccess;
+use humhub\components\InstallationState;
 use Yii;
 use yii\base\ActionFilter;
-use yii\web\ForbiddenHttpException;
+use yii\base\InvalidConfigException;
 use yii\web\HttpException;
 
 /**
@@ -25,7 +26,7 @@ use yii\web\HttpException;
  * Disable guest access for all controller actions:
  *
  * ```php
- * public function getAccessRules()
+ * protected function getAccessRules()
  * {
  *     return [
  *          ['login']
@@ -36,7 +37,7 @@ use yii\web\HttpException;
  * Disable guest access for specific controller actions:
  *
  * ```php
- * public function getAccessRules()
+ * protected function getAccessRules()
  * {
  *     return [
  *          ['login' => ['action1', 'action2']]
@@ -47,7 +48,7 @@ use yii\web\HttpException;
  * All users have to be logged in + additional permission check for 'action1' and 'action2':
  *
  * ```php
- * public function getAccessRules()
+ * protected function getAccessRules()
  * {
  *     return [
  *          ['login'],
@@ -59,7 +60,7 @@ use yii\web\HttpException;
  * Custom inline validator for action 'action1':
  *
  * ```php
- * public function getAccessRules()
+ * protected function getAccessRules()
  * {
  *     return [
  *          ['validateMyCustomRule', 'someParameter' => 'someValue', 'actions' => ['action1']]
@@ -95,7 +96,6 @@ use yii\web\HttpException;
  */
 class AccessControl extends ActionFilter
 {
-
     /**
      * Rules for access to controller
      *
@@ -114,13 +114,14 @@ class AccessControl extends ActionFilter
     /**
      * Only allow admins access to this controller
      *
-     * @var boolean
+     * @var bool
      * @deprecated since 1.2.2 use ['adminOnly'] rule instead
      */
     public $adminOnly = false;
 
     /**
      * Only allow logged in users access to this controller
+     *
      * @deprecated since 1.2.2 use ['loggedInOnly'] rule instead
      */
     public $loggedInOnly = false;
@@ -136,9 +137,11 @@ class AccessControl extends ActionFilter
     public function beforeAction($action)
     {
         // Bypass when not installed for installer
-        if (empty(Yii::$app->params['installed']) &&
-                  Yii::$app->controller->module != null &&
-                  Yii::$app->controller->module->id == 'installer') {
+        if (
+            !Yii::$app->installationState->hasState(InstallationState::STATE_INSTALLED)
+            && ($module = Yii::$app->controller->module)
+            && $module->id === 'installer'
+        ) {
             return true;
         }
 
@@ -146,11 +149,19 @@ class AccessControl extends ActionFilter
         $this->controllerAccess = $this->getControllerAccess($this->rules);
 
         if (!$this->controllerAccess->run()) {
+            // Tripwire: the codeCallback mechanism was removed in 1.19 (replaced by user
+            // gates). Fail loudly if a custom ControllerAccess still sets one instead of
+            // silently skipping the enforcement action it expects to be invoked.
+            if (isset($this->controllerAccess->codeCallback)) {
+                throw new InvalidConfigException('The ControllerAccess codeCallback mechanism was removed in HumHub 1.19 — implement the enforcement as a user gate instead (see docs/develop/user-gates.md).');
+            }
+
             if ($this->controllerAccess->code == 401) {
-                return $this->loginRequired();
+                $this->loginRequired();
             } else {
                 $this->forbidden();
             }
+            return false;
         }
 
         return parent::beforeAction($action);
@@ -203,21 +214,20 @@ class AccessControl extends ActionFilter
     }
 
     /**
-     * @throws ForbiddenHttpException
+     * @throws HttpException
      */
-    protected function forbidden()
+    protected function forbidden(): never
     {
         throw new HttpException($this->controllerAccess->code, $this->controllerAccess->reason);
     }
 
     /**
-     * @return bool forces user login
+     * Force user to log in
      */
     protected function loginRequired()
     {
         Yii::$app->user->logout();
         Yii::$app->user->loginRequired();
-
-        return false;
     }
+
 }

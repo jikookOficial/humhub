@@ -9,17 +9,17 @@
 namespace humhub\modules\marketplace;
 
 use humhub\components\Module as BaseModule;
-use humhub\models\Setting;
 use humhub\modules\marketplace\components\HumHubApiClient;
 use humhub\modules\marketplace\components\LicenceManager;
-use humhub\modules\marketplace\models\Licence;
 use humhub\modules\marketplace\components\OnlineModuleManager;
+use humhub\modules\marketplace\models\Licence;
 use Yii;
 
 /**
  * The Marketplace modules contains all the capabilities to interact with the offical HumHub marketplace.
  * The core functions are the ability to easily install or update modules from the remote module directory.
  *
+ * @property-read Licence $licence
  * @property OnlineModuleManager $onlineModuleManager
  * @since 1.4
  */
@@ -38,6 +38,7 @@ class Module extends BaseModule
     /**
      * @var string path to store marketplace modules
      * If the param 'moduleMarketplacePath' is set this value will be used.
+     * Note: The path must also be added to the module autoloader `Yii::$app->params['moduleAutoloadPaths']`.
      */
     public $modulesPath = '@app/modules';
 
@@ -57,16 +58,20 @@ class Module extends BaseModule
     public $hideLegacyModules = true;
 
     /**
+     * @since 1.8
+     * @var array A list of module ids that cannot be installed.
+     */
+    public $moduleBlacklist = [];
+    private $_onlineModuleManager = null;
+    private $_humhubApi = null;
+
+    /**
      * @inheritdoc
      */
     public function getName()
     {
         return Yii::t('MarketplaceModule.base', 'Marketplace');
     }
-
-    private $_onlineModuleManager = null;
-
-    private $_humhubApi = null;
 
     /**
      * @inheritDoc
@@ -85,6 +90,17 @@ class Module extends BaseModule
     }
 
     /**
+     * @return bool
+     */
+    public static function isMarketplaceEnabled(): bool
+    {
+        /* @var Module $marketplaceModule */
+        $marketplaceModule = Yii::$app->getModule('marketplace');
+
+        return $marketplaceModule && $marketplaceModule->enabled;
+    }
+
+    /**
      * @return OnlineModuleManager
      */
     public function getOnlineModuleManager()
@@ -98,7 +114,7 @@ class Module extends BaseModule
 
 
     /**
-     * Returns the currently active licence object
+     * Returns the currently active Licence object
      *
      * @return Licence
      */

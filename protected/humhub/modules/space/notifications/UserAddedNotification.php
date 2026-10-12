@@ -8,10 +8,9 @@
 
 namespace humhub\modules\space\notifications;
 
-use Yii;
-use yii\bootstrap\Html;
+use humhub\helpers\Html;
 use humhub\modules\notification\components\BaseNotification;
-
+use Yii;
 
 class UserAddedNotification extends BaseNotification
 {
@@ -27,19 +26,19 @@ class UserAddedNotification extends BaseNotification
 
 
     /**
-     *  @inheritdoc
+     * @inheritdoc
      */
     public function category()
     {
-        return new SpaceMemberNotificationCategory;
+        return new SpaceMemberNotificationCategory();
     }
 
     /**
-     *  @inheritdoc
+     * @inheritdoc
      */
     public function getMailSubject()
     {
-        return strip_tags($this->html());
+        return $this->getInfoText($this->getSpace()->getDisplayName());
     }
 
     /**
@@ -47,8 +46,13 @@ class UserAddedNotification extends BaseNotification
      */
     public function html()
     {
+        return $this->getInfoText(Html::tag('strong', Html::encode($this->getSpace()->getDisplayName())));
+    }
+
+    private function getInfoText($spaceName)
+    {
         return Yii::t('SpaceModule.notification', 'You were added to Space {spaceName}', [
-                    '{spaceName}' => Html::tag('strong', Html::encode($this->getSpace()->name))
+            '{spaceName}' => $spaceName,
         ]);
     }
 

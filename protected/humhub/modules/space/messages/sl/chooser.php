@@ -1,19 +1,17 @@
 <?php
-return array (
+return [
   'Add Space' => '',
-  'Add {n,plural,=1{space} other{spaces}}' => '',
-  'Create new space' => '',
-  'My spaces' => '',
-  'No member or following spaces found.' => '',
-  'No result found for the given filter.' => '',
+  'Create Space' => '',
+  'My spaces' => 'Moji prostori',
+  'No Spaces found.' => '',
   'No spaces found for the given query' => '',
-  'Search' => '',
+  'Please enter at least {count} characters to search Spaces.' => '',
+  'Search' => 'Išči',
   'Search for spaces' => '',
   'Select {n,plural,=1{space} other{spaces}}' => '',
   'This field only allows a maximum of {n,plural,=1{# space} other{# spaces}}' => '',
   'This space is archived' => '',
-  'To search for other spaces, type at least {count} characters.' => '',
-  'You are a member of this space' => '',
   'You are following this space' => '',
+  'You are not a member of or following any Spaces.' => '',
   '{n,plural,=1{# new entry} other{# new entries}} since your last visit' => '',
-);
+];

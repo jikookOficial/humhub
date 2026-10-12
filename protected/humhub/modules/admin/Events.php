@@ -12,30 +12,33 @@ use humhub\components\Application;
 use humhub\modules\admin\widgets\AdminMenu;
 use humhub\modules\user\events\UserEvent;
 use Yii;
+use yii\base\BaseObject;
+use yii\base\Event;
 
 /**
  * Admin Module provides the administrative backend for HumHub installations.
  *
  * @since 0.5
  */
-class Events extends \yii\base\BaseObject
+class Events extends BaseObject
 {
-
     /**
      * On Init of Dashboard Sidebar, add the approve notification widget
      *
-     * @param \yii\base\Event $event the event
+     * @param Event $event the event
      */
     public static function onDashboardSidebarInit($event)
     {
+        $event->sender->addWidget(widgets\MaintenanceModeWarning::class, [], ['sortOrder' => 0]);
+
         if (Yii::$app->user->isGuest) {
             return;
         }
 
         if (Yii::$app->getModule('user')->settings->get('auth.needApproval')) {
-            if (Yii::$app->user->getIdentity()->canApproveUsers()) {
+            if (Yii::$app->user->getIdentity()->canManageUsers()) {
                 $event->sender->addWidget(widgets\DashboardApproval::class, [], [
-                    'sortOrder' => 99
+                    'sortOrder' => 99,
                 ]);
             }
         }
@@ -46,19 +49,21 @@ class Events extends \yii\base\BaseObject
     /**
      * Callback on daily cron job run
      *
-     * @param \yii\base\Event $event
+     * @param Event $event
      */
     public static function onCronDailyRun($event)
     {
         Yii::$app->queue->push(new jobs\CleanupLog());
+        Yii::$app->queue->push(new jobs\CleanupPendingRegistrations());
         Yii::$app->queue->push(new jobs\CheckForNewVersion());
     }
 
     /**
      * @param $event UserEvent
      */
-    public static function onSwitchUser($event) {
-        if(Yii::$app instanceof Application) {
+    public static function onSwitchUser($event)
+    {
+        if (Yii::$app instanceof Application) {
             AdminMenu::reset();
         }
     }

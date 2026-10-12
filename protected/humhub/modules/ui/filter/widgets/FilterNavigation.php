@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @link https://www.humhub.org/
  * @copyright Copyright (c) 2018 HumHub GmbH & Co. KG
@@ -33,11 +34,10 @@ use yii\base\InvalidArgumentException;
  */
 abstract class FilterNavigation extends JsWidget
 {
-
     /**
      * @inheritdoc
      */
-    public $jsWidget = 'ui.Filter';
+    public $jsWidget = 'ui.filter.Filter';
 
     /**
      * @var array filter panels define separate filter container
@@ -63,6 +63,11 @@ abstract class FilterNavigation extends JsWidget
      * @var string view
      */
     public $view = 'filterNavigation';
+
+    /**
+     * @var string can be used to identify the related component e.g. a stream
+     */
+    public $componentId;
 
     /**
      * Filter definition can be used to manipulate the default settings of a filter.
@@ -100,21 +105,21 @@ abstract class FilterNavigation extends JsWidget
     /**
      * Initialization logic for default filter panels
      */
-    protected abstract function initFilterPanels();
+    abstract protected function initFilterPanels();
 
     /**
      * Initialization logic for default filter blocks.
      *
      * This function can make use of the [[addFilterBlock()]] to add filter blocks to the previously initialized panels
      */
-    protected abstract function initFilterBlocks();
+    abstract protected function initFilterBlocks();
 
     /**
      * Initialization logic for default filter blocks.
      *
      * This function can make use of the [[addFilter()]] to add filters the previously initialized blocks
      */
-    protected abstract function initFilters();
+    abstract protected function initFilters();
 
 
     /**
@@ -147,27 +152,39 @@ abstract class FilterNavigation extends JsWidget
     {
         return $this->render($this->view, [
             'panels' => $this->filterOutEmptyPanels(),
-            'options' => $this->getOptions()
+            'options' => $this->getOptions(),
+            'isCollapsed' => $this->isCollapsed(),
         ]);
+    }
+
+    public function getData()
+    {
+        if ($this->componentId) {
+            return [
+                'filter-component-id' => $this->componentId,
+            ];
+        }
+
+        return parent::getData();
     }
 
     public function filterOutEmptyPanels()
     {
         $result = [];
         foreach ($this->filterPanels as $key => $blocks) {
-            if(empty($blocks)) {
+            if (empty($blocks)) {
                 continue;
             }
 
             $hasFilter = false;
             foreach ($blocks as $block) {
-                if(!empty($block['filters'])) {
+                if (!empty($block['filters'])) {
                     $hasFilter = true;
                     break;
                 }
             }
 
-            if($hasFilter) {
+            if ($hasFilter) {
                 $result[$key] = $blocks;
             }
         }
@@ -202,7 +219,7 @@ abstract class FilterNavigation extends JsWidget
      */
     public function addFilter($filter, $blockId = null)
     {
-        if(!isset($filter['id'])) {
+        if (!isset($filter['id'])) {
             throw new InvalidArgumentException('Filter without filter id given!');
         }
 
@@ -210,7 +227,7 @@ abstract class FilterNavigation extends JsWidget
             return;
         }
 
-        if(!isset($filter['class'])) {
+        if (!isset($filter['class'])) {
             $filter['class'] = CheckboxListFilterInput::class;
         }
 
@@ -232,7 +249,7 @@ abstract class FilterNavigation extends JsWidget
         }
 
         if (isset($this->filterBlocks[$blockId])) {
-            $this->filterBlocks[$blockId]['filters'] = isset($this->filterBlocks[$blockId]['filters']) ? $this->filterBlocks[$blockId]['filters'] : [];
+            $this->filterBlocks[$blockId]['filters'] ??= [];
             $this->filterBlocks[$blockId]['filters'][] = $filter;
         }
 
@@ -252,5 +269,10 @@ abstract class FilterNavigation extends JsWidget
         }
 
         return array_key_exists($filterId, $this->definition) || in_array($filterId, $this->definition);
+    }
+
+    public function isCollapsed(): bool
+    {
+        return true;
     }
 }

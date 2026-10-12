@@ -22,9 +22,8 @@ use yii\helpers\Url;
  *
  * @SuppressWarnings(PHPMD)
  */
-class FunctionalTester extends \Codeception\Actor
+class FunctionalTester extends BaseTester
 {
-
     use _generated\FunctionalTesterActions;
 
     public function amAdmin($logout = false)
@@ -33,14 +32,14 @@ class FunctionalTester extends \Codeception\Actor
             $this->logout();
         }
 
-        LoginPage::openBy($this)->login('admin', 'test');
+        LoginPage::openBy($this)->login('admin', 'admin&humhub@PASS%worD!');
         $this->see('Dashboard');
         $this->see('Administration');
     }
 
     public function setGroupPermission($groupId, $permission, $state = 1)
     {
-        if(is_string($permission)) {
+        if (is_string($permission)) {
             $permission = Yii::createObject(['class' => $permission]);
         }
 
@@ -48,8 +47,8 @@ class FunctionalTester extends \Codeception\Actor
             'permission_id' => $permission->id,
             'group_id' => $groupId,
             'module_id' => $permission->moduleId,
-            'class' => get_class($permission),
-            'state' => $state
+            'class' => $permission::class,
+            'state' => $state,
         ]))->save();
 
         \Yii::$app->user->getPermissionManager()->clear();
@@ -80,7 +79,7 @@ class FunctionalTester extends \Codeception\Actor
     {
         $space = $this->loginBySpaceUserGroup($userGroup, $path, $params, $post);
 
-        if($userGroup === Space::USERGROUP_GUEST) {
+        if ($userGroup === Space::USERGROUP_GUEST) {
             $this->seeInCurrentUrl('auth');
             $this->seeInCurrentUrl('login');
         } else {
@@ -102,7 +101,7 @@ class FunctionalTester extends \Codeception\Actor
     {
         $spaceId = null;
         $user = null;
-        switch($userGroup) {
+        switch ($userGroup) {
             case 'root':
                 $spaceId = 2;
                 $user = 'Admin';
@@ -129,15 +128,15 @@ class FunctionalTester extends \Codeception\Actor
                 break;
             case Space::USERGROUP_GUEST:
                 $this->logout();
-                $spaceId = 1;
+                $spaceId = 2;
                 break;
         }
 
-        if($spaceId) {
+        if ($spaceId) {
             $space = Space::findOne(['id' => $spaceId]);
         }
 
-        if($user) {
+        if ($user) {
             $this->logout();
             $this->amUser($user);
         }
@@ -147,7 +146,7 @@ class FunctionalTester extends \Codeception\Actor
     }
 
 
-    public function amUser($user = null, $password = '123qwe', $logout = false)
+    public function amUser($user = null, $password = 'user^humhub@PASS%worD!', $logout = false)
     {
         if ($logout) {
             $this->logout();
@@ -156,8 +155,8 @@ class FunctionalTester extends \Codeception\Actor
         if ($user == null) {
             $this->amUser1();
         } else {
-            if(strtolower($user) == 'admin') {
-                $password = 'test';
+            if (strtolower((string) $user) == 'admin') {
+                $password = 'admin&humhub@PASS%worD!';
             }
             LoginPage::openBy($this)->login($user, $password);
             tests\codeception\_pages\DashboardPage::openBy($this);
@@ -167,17 +166,17 @@ class FunctionalTester extends \Codeception\Actor
 
     public function amUser1($logout = false)
     {
-        $this->amUser('User1', '123qwe', $logout);
+        $this->amUser('User1', 'user^humhub@PASS%worD!', $logout);
     }
 
     public function amUser2($logout = false)
     {
-        $this->amUser('User2', '123qwe', $logout);
+        $this->amUser('User2', 'user^humhub@PASS%worD!', $logout);
     }
 
     public function amUser3($logout = false)
     {
-        $this->amUser('User3', '123qwe', $logout);
+        $this->amUser('User3', 'user^humhub@PASS%worD!', $logout);
     }
 
     public function logout()
@@ -235,34 +234,31 @@ class FunctionalTester extends \Codeception\Actor
         $this->amOnSpace(4, $path, $params, $post);
     }
 
-    public $spaces = [
-        '5396d499-20d6-4233-800b-c6c86e5fa34a',
-        '5396d499-20d6-4233-800b-c6c86e5fa34b',
-        '5396d499-20d6-4233-800b-c6c86e5fa34c',
-        '5396d499-20d6-4233-800b-c6c86e5fa34d',
-    ];
-
-    public function amOnSpace($guid, $path = '/space/space', $params = [], $post = false)
+    public function amOnSpace($spaceOrIndexOrGuid, $path = '/space/space', $params = [], $post = false)
     {
-        if(is_bool($params)) {
+        if (is_bool($params)) {
             $post = $params;
             $params = [];
         }
 
-        if(!$path) {
+        if (!$path) {
             $path = '/space/space';
         }
 
-        if(is_int($guid)) {
-            $guid = $this->spaces[--$guid];
-        } else if($guid instanceof Space) {
-            $guid = $guid->guid;
+        if (is_int($spaceOrIndexOrGuid)) {
+            $guid = $this->getFixtureSpaceGuid(--$spaceOrIndexOrGuid);
+        } elseif (is_string($spaceOrIndexOrGuid)) {
+            $guid = $spaceOrIndexOrGuid;
+        } elseif ($spaceOrIndexOrGuid instanceof Space) {
+            $guid = $spaceOrIndexOrGuid->guid;
+        } else {
+            $guid = '';
         }
 
         $params['cguid'] = $guid;
 
-        if($post) {
-            $route =  array_merge([$path], $params);
+        if ($post) {
+            $route = array_merge([$path], $params);
             $this->sendAjaxPostRequest(Url::toRoute($route), (is_array($post) ? $post : []));
         } else {
             $this->amOnRoute($path, $params);
@@ -286,17 +282,6 @@ class FunctionalTester extends \Codeception\Actor
     public function amOnDashboard()
     {
         tests\codeception\_pages\DashboardPage::openBy($this);
-    }
-
-    public function enableModule($guid, $moduleId)
-    {
-        if(is_int($guid)) {
-            $guid = $this->spaces[--$guid];
-        }
-
-        $space = Space::findOne(['guid' => $guid]);
-        $space->enableModule($moduleId);
-        Yii::$app->moduleManager->flushCache();
     }
 
 }

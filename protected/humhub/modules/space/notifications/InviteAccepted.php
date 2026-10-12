@@ -8,9 +8,9 @@
 
 namespace humhub\modules\space\notifications;
 
-use Yii;
-use yii\bootstrap\Html;
+use humhub\helpers\Html;
 use humhub\modules\notification\components\BaseNotification;
+use Yii;
 
 /**
  * SpaceInviteAcceptedNotification is sent to the originator of the invite to
@@ -21,7 +21,6 @@ use humhub\modules\notification\components\BaseNotification;
  */
 class InviteAccepted extends BaseNotification
 {
-
     /**
      * @inheritdoc
      */
@@ -33,19 +32,19 @@ class InviteAccepted extends BaseNotification
     public $viewName = 'inviteAccepted';
 
     /**
-     *  @inheritdoc
+     * @inheritdoc
      */
     public function category()
     {
-        return new SpaceMemberNotificationCategory;
+        return new SpaceMemberNotificationCategory();
     }
 
     /**
-     *  @inheritdoc
+     * @inheritdoc
      */
     public function getMailSubject()
     {
-        return strip_tags($this->html());
+        return $this->getInfoText($this->originator->displayName, $this->source->displayName);
     }
 
     /**
@@ -53,10 +52,19 @@ class InviteAccepted extends BaseNotification
      */
     public function html()
     {
+        return $this->getInfoText(
+            Html::tag('strong', Html::encode($this->originator->displayName)),
+            Html::tag('strong', Html::encode($this->source->name)),
+        );
+    }
+
+    private function getInfoText($displayName, $spaceName)
+    {
         return Yii::t('SpaceModule.notification', '{displayName} accepted your invite for the space {spaceName}', [
-                    '{displayName}' => Html::tag('strong', Html::encode($this->originator->displayName)),
-                    '{spaceName}' => Html::tag('strong', Html::encode($this->source->name))
+            '{displayName}' => $displayName,
+            '{spaceName}' => $spaceName,
         ]);
+
     }
 
 }

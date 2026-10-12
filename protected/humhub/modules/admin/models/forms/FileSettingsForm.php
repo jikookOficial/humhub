@@ -2,35 +2,39 @@
 
 namespace humhub\modules\admin\models\forms;
 
+use humhub\libs\Helpers;
 use Yii;
+use yii\base\Model;
 
 /**
  * FileSettingsForm
+ * @property int $maxFileSize
+ * @property int $excludeMediaFilesPreview Exclude media files from stream attachment list
+ * @property int $useXSendfile
+ * @property string $allowedExtensions
+ *
  * @since 0.5
  */
-class FileSettingsForm extends \yii\base\Model
+class FileSettingsForm extends Model
 {
-
     public $maxFileSize;
-    public $maxPreviewImageWidth;
-    public $maxPreviewImageHeight;
-    public $hideImageFileInfo;
+    public $excludeMediaFilesPreview;
     public $useXSendfile;
     public $allowedExtensions;
 
     /**
      * @inheritdoc
      */
-    public function init()
+    public function init(): void
     {
         parent::init();
 
+        [,,$defaultValue] = self::getPHPMaxUploadSize();
+
         $settingsManager = Yii::$app->getModule('file')->settings;
 
-        $this->maxFileSize = $settingsManager->get('maxFileSize') / 1024 / 1024;
-        $this->maxPreviewImageWidth = $settingsManager->get('maxPreviewImageWidth');
-        $this->maxPreviewImageHeight = $settingsManager->get('maxPreviewImageHeight');
-        $this->hideImageFileInfo = $settingsManager->get('hideImageFileInfo');
+        $this->maxFileSize = ($settingsManager->get('maxFileSize') / 1024 / 1024) ?: $defaultValue;
+        $this->excludeMediaFilesPreview = $settingsManager->get('excludeMediaFilesPreview');
         $this->useXSendfile = $settingsManager->get('useXSendfile');
         $this->allowedExtensions = $settingsManager->get('allowedExtensions');
     }
@@ -38,26 +42,58 @@ class FileSettingsForm extends \yii\base\Model
     /**
      * @inheritdoc
      */
-    public function rules()
+    public function rules(): array
     {
+        [$a,$maxUploadSize, $defaultValue] = self::getPHPMaxUploadSize();
+
         return [
             [['allowedExtensions'], 'match', 'pattern' => '/^[A-Za-z0-9_,]+$/u'],
-            [['maxFileSize', 'useXSendfile', 'maxPreviewImageWidth', 'maxPreviewImageHeight', 'hideImageFileInfo'], 'integer'],
+            [['useXSendfile', 'excludeMediaFilesPreview'], 'integer'],
+            [['maxFileSize'], 'default', 'value' => $defaultValue],
+            [['maxFileSize'], 'integer', 'min' => 1, 'max' => $maxUploadSize],
         ];
     }
 
     /**
      * @inheritdoc
      */
-    public function attributeLabels()
+    public function attributeLabels(): array
     {
         return [
             'maxFileSize' => Yii::t('AdminModule.settings', 'Maximum upload file size (in MB)'),
             'useXSendfile' => Yii::t('AdminModule.settings', 'Use X-Sendfile for File Downloads'),
-            'maxPreviewImageWidth' => Yii::t('AdminModule.settings', 'Maximum preview image width (in pixels, optional)'),
-            'maxPreviewImageHeight' => Yii::t('AdminModule.settings', 'Maximum preview image height (in pixels, optional)'),
-            'hideImageFileInfo' => Yii::t('AdminModule.settings', 'Hide file info (name, size) for images on wall'),
+            'excludeMediaFilesPreview' => Yii::t('AdminModule.settings', 'Exclude media files from stream attachment list'),
             'allowedExtensions' => Yii::t('AdminModule.settings', 'Allowed file extensions'),
+        ];
+    }
+
+    public function attributeHints(): array
+    {
+        [$fileSizeKey, $maxUploadSize] = self::getPHPMaxUploadSize();
+
+        return [
+            'maxFileSize' => Yii::t('AdminModule.settings', 'PHP reported a maximum of {maxUploadSize} MB', [
+                '{maxUploadSize}' => "(" . $fileSizeKey . "): " . $maxUploadSize,
+            ]),
+            'allowedExtensions' => Yii::t('AdminModule.settings', 'Comma separated list. Leave empty to allow all.'),
+        ];
+    }
+
+    public static function getPHPMaxUploadSize(): array
+    {
+        $maxUploadSize = Helpers::getBytesOfIniValue(ini_get('upload_max_filesize'));
+        $fileSizeKey = 'upload_max_filesize';
+        if ($maxUploadSize > Helpers::getBytesOfIniValue(ini_get('post_max_size'))) {
+            $maxUploadSize = Helpers::getBytesOfIniValue(ini_get('post_max_size'));
+            $fileSizeKey = 'post_max_size';
+        }
+
+        $maxUploadSizeInMb = $maxUploadSize / 1024 / 1024;
+
+        return [
+            $fileSizeKey,
+            $maxUploadSizeInMb,
+            min($maxUploadSizeInMb, 64),
         ];
     }
 
@@ -65,15 +101,13 @@ class FileSettingsForm extends \yii\base\Model
     /**
      * Saves the form
      *
-     * @return boolean
+     * @return bool
      */
-    public function save()
+    public function save(): bool
     {
         $settingsManager = Yii::$app->getModule('file')->settings;
-        $settingsManager->set('maxFileSize', $this->maxFileSize * 1024 * 1024);
-        $settingsManager->set('maxPreviewImageWidth', $this->maxPreviewImageWidth);
-        $settingsManager->set('maxPreviewImageHeight', $this->maxPreviewImageHeight);
-        $settingsManager->set('hideImageFileInfo', $this->hideImageFileInfo);
+        $settingsManager->set('maxFileSize', (int)$this->maxFileSize * 1024 * 1024);
+        $settingsManager->set('excludeMediaFilesPreview', $this->excludeMediaFilesPreview);
         $settingsManager->set('useXSendfile', $this->useXSendfile);
         $settingsManager->set('allowedExtensions', strtolower($this->allowedExtensions));
 

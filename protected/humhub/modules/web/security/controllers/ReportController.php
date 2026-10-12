@@ -17,13 +17,14 @@ class ReportController extends Controller
     {
         Yii::$app->response->statusCode = 204;
 
-        if(!SecuritySettings::isReportingEnabled()) {
+        if (!SecuritySettings::isReportingEnabled()) {
             return;
         }
 
         $json_data = file_get_contents('php://input');
         if ($json_data = json_decode($json_data)) {
             $json_data = json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            $json_data = preg_replace('/\'nonce-[^\']*\'/', "'nonce-xxxxxxxxxxxxxxxxxxxxxxxx'", $json_data);
             Yii::error($json_data, 'web.security');
         }
     }

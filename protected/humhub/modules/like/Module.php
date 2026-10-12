@@ -18,14 +18,13 @@ use Yii;
  */
 class Module extends \humhub\components\Module
 {
-
     /**
      * @inheritdoc
      */
     public $isCoreModule = true;
 
     /**
-     * @var boolean automatic follow liked content
+     * @var bool automatic follow liked content
      * @since 1.2.5
      */
     public $autoFollowLikedContent = false;
@@ -35,6 +34,20 @@ class Module extends \humhub\components\Module
      * @since 1.4
      */
     public $isEnabled = true;
+
+    /**
+     * @inheritdoc
+     */
+    public function getPermissions($contentContainer = null)
+    {
+        if (isset($contentContainer)) {
+            return [
+                new permissions\CanLike(),
+            ];
+        }
+
+        return [];
+    }
 
     /**
      * @inheritdoc
@@ -54,8 +67,7 @@ class Module extends \humhub\components\Module
         }
 
         return [
-            'humhub\modules\like\notifications\NewLike'
+            'humhub\modules\like\notifications\NewLike',
         ];
     }
-
 }

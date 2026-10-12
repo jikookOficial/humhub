@@ -1,19 +1,16 @@
 <?php
 
-
-use yii\db\Migration;
-use humhub\models\Setting;
+use humhub\components\Migration;
 
 class m150204_103433_html5_notified extends Migration
 {
-
     public function up()
     {
-        if (Setting::isInstalled()) {
+        if (!$this->isInitialInstallation()) {
             $this->insert('setting', [
                 'name' => 'enable_html5_desktop_notifications',
                 'value' => 0,
-                'module_id' => 'notification'
+                'module_id' => 'notification',
             ]);
         }
 

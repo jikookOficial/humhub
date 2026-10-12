@@ -8,6 +8,7 @@
 
 /* @var $this \humhub\components\View */
 
+use humhub\components\View;
 use humhub\modules\topic\widgets\TopicPicker;
 
 ?>

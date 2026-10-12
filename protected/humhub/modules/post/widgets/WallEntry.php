@@ -8,11 +8,22 @@
 
 namespace humhub\modules\post\widgets;
 
+use humhub\modules\content\widgets\stream\WallStreamEntryWidget;
+use humhub\modules\post\models\Post;
+use humhub\modules\post\Module;
+use Yii;
+
 /**
  * @inheritdoc
  */
-class WallEntry extends \humhub\modules\content\widgets\WallEntry
+class WallEntry extends WallStreamEntryWidget
 {
+    /**
+     * Route to create a content
+     *
+     * @var string
+     */
+    public $createRoute = '/post/post/create-form';
 
     /**
      * @inheritdoc
@@ -22,9 +33,30 @@ class WallEntry extends \humhub\modules\content\widgets\WallEntry
     /**
      * @inheritdoc
      */
-    public function run()
-    {
-        return $this->render('wallEntry', ['post' => $this->contentObject, 'justEdited' => $this->justEdited]);
-    }
+    public $createFormSortOrder = 100;
 
+    /**
+     * @inheritdoc
+     */
+    public $createFormClass = Form::class;
+
+    /**
+     * @inheritdoc
+     */
+    protected function renderContent()
+    {
+        /** @var Module $module */
+        $module = Yii::$app->getModule('post');
+
+        $guestExpandPosts = $module->guestExpandPosts && Yii::$app->user->isGuest;
+
+        return $this->render('wallEntry', [
+            'post' => $this->model,
+            'justEdited' => $this->renderOptions->isJustEdited(), // compatibility for themed legacy views
+            'renderOptions' => $this->renderOptions,
+            'enableDynamicFontSize' => $module->enableDynamicFontSize,
+            'collapsedPostHeight' => $guestExpandPosts ? 0 : $module->collapsedPostHeight,
+            'guestExpandPosts' => $guestExpandPosts,
+        ]);
+    }
 }

@@ -8,7 +8,7 @@
 
 namespace humhub\modules\space\widgets;
 
-use humhub\modules\content\components\ContentContainerController;
+use humhub\helpers\ControllerHelper;
 use humhub\modules\content\helpers\ContentContainerHelper;
 use humhub\modules\space\models\Space;
 use humhub\modules\ui\menu\MenuLink;
@@ -24,7 +24,6 @@ use yii\base\Exception;
  */
 class Menu extends LeftNavigation
 {
-
     /** @var Space */
     public $space;
 
@@ -36,7 +35,7 @@ class Menu extends LeftNavigation
      */
     public function init()
     {
-        if(!$this->space) {
+        if (!$this->space) {
             $this->space = ContentContainerHelper::getCurrent(Space::class);
         }
 
@@ -46,15 +45,22 @@ class Menu extends LeftNavigation
 
         $this->panelTitle = Yii::t('SpaceModule.base', '<strong>Space</strong> menu');
 
+        parent::init();
+
+        // For private Spaces without membership, don't show menu entries.
+        // This is necessary for the invitation process otherwise there is no access in this case anyway.
+        if ($this->space->visibility == Space::VISIBILITY_NONE && !$this->space->isMember()) {
+            $this->entries = [];
+            return;
+        }
+
         $this->addEntry(new MenuLink([
             'label' => Yii::t('SpaceModule.base', 'Stream'),
             'url' => $this->space->createUrl('/space/space/home'),
-            'icon' => 'fa-bars',
+            'icon' => 'stream',
             'sortOrder' => 100,
-            'isActive' => MenuLink::isActiveState('space', 'space', ['index', 'home']),
+            'isActive' => ControllerHelper::isActivePath('space', 'space', ['index', 'home']),
         ]));
-
-        parent::init();
     }
 
     /**
@@ -85,44 +91,21 @@ class Menu extends LeftNavigation
      */
     public static function getDefaultPageUrl($space)
     {
-        $settings = Yii::$app->getModule('space')->settings;
-
-        $indexUrl = $settings->contentContainer($space)->get('indexUrl');
-        if ($indexUrl !== null) {
-            $pages = static::getAvailablePages();
-            if (isset($pages[$indexUrl])) {
-                return $indexUrl;
-            }
-
-            //Either the module was deactivated or url changed
-            $settings->contentContainer($space)->delete('indexUrl');
-        }
-
-        return null;
+        $indexUrl = $space->getAdvancedSettings()->indexUrl;
+        return (!empty($indexUrl) && isset(static::getAvailablePages()[$indexUrl]))
+            ? $indexUrl : null;
     }
 
     /**
-     * Returns space default / homepage
+     * Returns space default / homepage for guests
      *
      * @param $space Space
      * @return string|null the url to redirect or null for default home
      */
     public static function getGuestsDefaultPageUrl($space)
     {
-        $settings = Yii::$app->getModule('space')->settings;
-
-        $indexUrl = $settings->contentContainer($space)->get('indexGuestUrl');
-        if ($indexUrl !== null) {
-            $pages = static::getAvailablePages();
-            if (isset($pages[$indexUrl])) {
-                return $indexUrl;
-            }
-
-            //Either the module was deactivated or url changed
-            $settings->contentContainer($space)->delete('indexGuestUrl');
-        }
-
-        return null;
+        $indexUrl = $space->getAdvancedSettings()->indexGuestUrl;
+        return (!empty($indexUrl) && isset(static::getAvailablePages()[$indexUrl]))
+            ? $indexUrl : null;
     }
-
 }

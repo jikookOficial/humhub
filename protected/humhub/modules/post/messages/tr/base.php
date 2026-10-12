@@ -1,12 +1,14 @@
 <?php
-return array (
+return [
   'Allow others to create new posts on your profile page' => 'Diğerlerinin profil sayfanızda yeni yayınlar oluşturmasına izin verin',
   'Allows the user to create posts' => 'Kullanıcının mesajlar oluşturmasına izin verir',
-  'Collapse' => 'Gizle',
   'Create post' => 'Mesaj oluştur',
   'Edit your post...' => 'Gönderini düzenle...',
-  'Read full post...' => 'Gönderinin tamamını oku...',
+  'Post' => 'Gönderi',
+  'Post could not be saved!' => '',
+  'The post must not be empty!' => '',
   'This space is archived.' => 'Bu alan arşivlenmektedir.',
+  'Title' => 'Başlık',
   'What\'s on your mind?' => 'Aklında neler var?',
   'post' => 'Gönderi',
-);
+];

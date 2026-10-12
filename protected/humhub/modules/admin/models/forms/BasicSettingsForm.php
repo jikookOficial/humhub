@@ -2,26 +2,26 @@
 
 namespace humhub\modules\admin\models\forms;
 
+use humhub\modules\user\components\MaintenanceModeGate;
 use Yii;
-use humhub\libs\DynamicConfig;
-use humhub\modules\space\models\Space;
-use humhub\modules\stream\actions\Stream;
+use yii\base\Model;
 
 /**
  * BasicSettingsForm
  * @since 0.5
  */
-class BasicSettingsForm extends \yii\base\Model
+class BasicSettingsForm extends Model
 {
-
     public $name;
     public $baseUrl;
     public $defaultLanguage;
     public $tour;
-    public $timeZone;
-    public $defaultStreamSort;
+    public $defaultTimeZone;
     public $dashboardShowProfilePostForm;
+    public $dashboardShowTopicSidebar;
     public $enableFriendshipModule;
+    public $maintenanceMode;
+    public $maintenanceModeInfo;
 
     /**
      * @inheritdoc
@@ -33,13 +33,14 @@ class BasicSettingsForm extends \yii\base\Model
         $this->name = Yii::$app->settings->get('name');
         $this->baseUrl = Yii::$app->settings->get('baseUrl');
         $this->defaultLanguage = Yii::$app->settings->get('defaultLanguage');
-        $this->timeZone = Yii::$app->settings->get('timeZone');
+        $this->defaultTimeZone = Yii::$app->settings->get('defaultTimeZone');
+        $this->maintenanceMode = Yii::$app->settings->get(MaintenanceModeGate::SETTING_MAINTENANCE_MODE);
+        $this->maintenanceModeInfo = Yii::$app->settings->get('maintenanceModeInfo');
 
         $this->dashboardShowProfilePostForm = Yii::$app->getModule('dashboard')->settings->get('showProfilePostForm');
+        $this->dashboardShowTopicSidebar = Yii::$app->getModule('dashboard')->settings->get('showTopicSidebar');
         $this->tour = Yii::$app->getModule('tour')->settings->get('enable');
         $this->enableFriendshipModule = Yii::$app->getModule('friendship')->settings->get('enable');
-
-        $this->defaultStreamSort = Yii::$app->getModule('stream')->settings->get('defaultSort');
     }
 
     /**
@@ -51,14 +52,11 @@ class BasicSettingsForm extends \yii\base\Model
             [['name', 'baseUrl'], 'required'],
             ['name', 'string', 'max' => 150],
             ['defaultLanguage', 'in', 'range' => array_keys(Yii::$app->i18n->getAllowedLanguages())],
-            ['timeZone', 'in', 'range' => \DateTimeZone::listIdentifiers()],
-            [['tour', 'dashboardShowProfilePostForm', 'enableFriendshipModule'], 'in', 'range' => [0, 1]],
-            [['defaultStreamSort'], 'in', 'range' => array_keys($this->getDefaultStreamSortOptions())],
-            [['baseUrl'], function ($attribute, $params, $validator) {
-                    if (substr($this->$attribute, 0, 7) !== 'http://' && substr($this->$attribute, 0, 8) !== 'https://') {
-                        $this->addError($attribute, Yii::t('AdminModule.base', 'Base URL needs to begin with http:// or https://'));
-                    }
-                }],
+            [['defaultTimeZone'], 'in', 'range' => \DateTimeZone::listIdentifiers()],
+            [['tour', 'dashboardShowProfilePostForm', 'dashboardShowTopicSidebar', 'enableFriendshipModule', 'maintenanceMode'], 'in', 'range' => [0, 1]],
+            [['baseUrl'], 'url', 'pattern' => '/^{schemes}:\/\/([A-Z0-9][A-Z0-9_\-\.]*)+(?::\d{1,5})?(?:$|[?\/#])/i'],
+            [['baseUrl'], 'trim'],
+            ['maintenanceModeInfo', 'safe'],
         ];
     }
 
@@ -71,45 +69,45 @@ class BasicSettingsForm extends \yii\base\Model
             'name' => Yii::t('AdminModule.settings', 'Name of the application'),
             'baseUrl' => Yii::t('AdminModule.settings', 'Base URL'),
             'defaultLanguage' => Yii::t('AdminModule.settings', 'Default language'),
-            'timeZone' => Yii::t('AdminModule.settings', 'Server Timezone'),
+            'defaultTimeZone' => Yii::t('AdminModule.settings', 'Default Timezone'),
             'tour' => Yii::t('AdminModule.settings', 'Show introduction tour for new users'),
             'dashboardShowProfilePostForm' => Yii::t('AdminModule.settings', 'Show user profile post form on dashboard'),
+            'dashboardShowTopicSidebar' => Yii::t('AdminModule.settings', 'Show topic widget in Dashboard sidebar'),
             'enableFriendshipModule' => Yii::t('AdminModule.settings', 'Enable user friendship system'),
             'defaultStreamSort' => Yii::t('AdminModule.settings', 'Default stream content order'),
+            'maintenanceMode' => Yii::t('AdminModule.settings', 'Enable maintenance mode'),
+            'maintenanceModeInfo' => Yii::t('AdminModule.settings', 'Add custom info text for maintenance mode. Displayed on the login page.'),
+        ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function attributeHints()
+    {
+        return [
+            'baseUrl' => Yii::t('AdminModule.settings', 'E.g. http://example.com/humhub'),
         ];
     }
 
     /**
      * Saves the form
-     * @return boolean
+     * @return bool
      */
     public function save()
     {
         Yii::$app->settings->set('name', $this->name);
         Yii::$app->settings->set('baseUrl', $this->baseUrl);
         Yii::$app->settings->set('defaultLanguage', $this->defaultLanguage);
-        Yii::$app->settings->set('timeZone', $this->timeZone);
+        Yii::$app->settings->set('defaultTimeZone', $this->defaultTimeZone);
+        Yii::$app->settings->set(MaintenanceModeGate::SETTING_MAINTENANCE_MODE, $this->maintenanceMode);
+        Yii::$app->settings->set('maintenanceModeInfo', $this->maintenanceModeInfo);
 
         Yii::$app->getModule('dashboard')->settings->set('showProfilePostForm', $this->dashboardShowProfilePostForm);
+        Yii::$app->getModule('dashboard')->settings->set('showTopicSidebar', $this->dashboardShowTopicSidebar);
         Yii::$app->getModule('tour')->settings->set('enable', $this->tour);
         Yii::$app->getModule('friendship')->settings->set('enable', $this->enableFriendshipModule);
-        Yii::$app->getModule('stream')->settings->set('defaultSort', $this->defaultStreamSort);
-
-        DynamicConfig::rewrite();
 
         return true;
     }
-
-    /**
-     * Returns available options for defaultStreamSort attribute
-     * @return array
-     */
-    public function getDefaultStreamSortOptions()
-    {
-        return [
-            Stream::SORT_CREATED_AT => Yii::t('AdminModule.settings', 'Sort by creation date'),
-            Stream::SORT_UPDATED_AT => Yii::t('AdminModule.settings', 'Sort by update date'),
-        ];
-    }
-
 }

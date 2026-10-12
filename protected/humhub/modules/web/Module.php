@@ -21,7 +21,6 @@ use humhub\modules\web\pwa\controllers\ServiceWorkerController;
  */
 class Module extends \humhub\components\Module
 {
-
     /**
      * @inheritdoc
      */
@@ -33,13 +32,19 @@ class Module extends \humhub\components\Module
     public $security;
 
     /**
+     * @since 1.8
+     * @var bool Disable Service Worker and PWA Support
+     */
+    public $enableServiceWorker = true;
+
+    /**
      * @inheritdoc
      */
     public $controllerMap = [
         'pwa-manifest' => ManifestController::class,
         'pwa-offline' => OfflineController::class,
         'pwa-service-worker' => ServiceWorkerController::class,
-        'security-report' => ReportController::class
+        'security-report' => ReportController::class,
     ];
 
     /**

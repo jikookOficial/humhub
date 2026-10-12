@@ -1,23 +1,14 @@
 <?php
-/**
- * @link https://www.humhub.org/
- * @copyright Copyright (c) 2017 HumHub GmbH & Co. KG
- * @license https://www.humhub.com/licences
- *
- */
 
 namespace humhub\modules\content\widgets\richtext;
 
-use humhub\libs\EmojiMap;
-use humhub\libs\Helpers;
+use humhub\helpers\Html;
 use humhub\libs\ParameterEvent;
-use humhub\modules\content\assets\ProseMirrorRichTextAsset;
-use humhub\modules\content\models\ContentContainer;
-use humhub\modules\space\models\Space;
-use humhub\modules\user\models\User;
-use Yii;
-use yii\helpers\Html;
-use humhub\models\UrlOembed;
+use humhub\modules\content\widgets\richtext\extensions\emoji\RichTextEmojiExtension;
+use humhub\modules\content\widgets\richtext\extensions\file\FileExtension;
+use humhub\modules\content\widgets\richtext\extensions\mentioning\MentioningExtension;
+use humhub\modules\content\widgets\richtext\extensions\oembed\OembedExtension;
+use humhub\modules\content\widgets\richtext\extensions\RichTextCompatibilityExtension;
 
 /**
  * The ProsemirrorRichText is a [Prosemirror](https://prosemirror.net) and [Markdown-it](https://github.com/markdown-it/markdown-it)
@@ -62,39 +53,30 @@ use humhub\models\UrlOembed;
  * See [markdown-it-anchor](https://www.npmjs.com/package/markdown-it-anchor) for more settings.
  *
  * ### clipboard
- *
  * Allows pasting of raw markdown content into the richtext editor.
  *
  * ### emoji
- *
  * [twemoji](https://github.com/twitter/twemoji) and [markdown-it-emoji](https://www.npmjs.com/package/markdown-it-emoji) based emojies
  *
  * ### fullscreen
- *
  * Adds a enlarge/shrink button to the rich text editor.
  *
  * ### mention
- *
  * Markdown link extension for mentionings in the form of [<name>](mention:<guid> "<profile-url>").
  *
  * ### oembed
- *
  * Enables scanning and replacement of pasted oembed links in form of link extensions [<url>](oembed:url)
  *
  * ### placeholder
- *
  * Text placeholder for the editor input
  *
  * ### strikethrough
- *
  * Markdown strikethrough formatting.
  *
  * ### table
- *
  * Simple Markdown table support.
  *
  * ### upload
- *
  * File upload support.
  *
  * @author Julian Harrer <julian.harrer@humhub.com>
@@ -106,19 +88,9 @@ use humhub\models\UrlOembed;
 class ProsemirrorRichText extends AbstractRichText
 {
     /**
-     * @var int defines the maximum amount of oembeds allowed in a single richtext
-     */
-    public static $maxOembed = 10;
-
-    /**
      * @inheritdoc
      */
     public $jsWidget = 'ui.richtext.prosemirror.RichText';
-
-    /**
-     * @var array holds included oembeds used for rendering
-     */
-    private $oembeds = [];
 
     /**
      * @inheritdoc
@@ -128,7 +100,19 @@ class ProsemirrorRichText extends AbstractRichText
     /**
      * @inheritdoc
      */
-    protected static $processorClass = ProsemirrorRichTextProcessor::class;
+    protected static $converterClass = ProsemirrorRichTextConverter::class;
+
+    /**
+     * @var string[]
+     * @since 1.8
+     */
+    protected static $extensions = [
+        RichTextCompatibilityExtension::class,
+        MentioningExtension::class,
+        FileExtension::class,
+        OembedExtension::class,
+        RichTextEmojiExtension::class,
+    ];
 
     /**
      * @inheritdoc
@@ -136,7 +120,8 @@ class ProsemirrorRichText extends AbstractRichText
     public function init()
     {
         parent::init();
-        if($this->edit) {
+        if ($this->edit) {
+            // In edit mode we only render a hidden rich text element
             $this->visible = false;
         }
     }
@@ -144,164 +129,31 @@ class ProsemirrorRichText extends AbstractRichText
     /**
      * @inheritdoc
      */
-    public function run() {
-        if($this->minimal) {
-            return $this->renderMinimal();
+    public function run()
+    {
+        $output = $this->text;
+
+        // E.g. when initializing empty editor
+        if (empty($output)) {
+            return $output;
         }
 
-        if($this->isCompatibilityMode()) {
-            $this->text = RichTextCompatibilityParser::parse($this->text);
-        }
-
-        $oembedCount = 0;
-        foreach (static::scanLinkExtension($this->text, 'oembed') as $match) {
-            if(isset($match[3]) && $oembedCount < static::$maxOembed) {
-                $oembedPreview =  UrlOembed::getOEmbed($match[3]);
-                if(!empty($oembedPreview)) {
-                    $oembedCount++;
-                    $this->oembeds[$match[3]] = $oembedPreview;
-                }
-            }
-        }
-
-        $this->text = $this->parseOutput();
-
-        if ($this->maxLength > 0) {
-            $this->text = Helpers::truncateText($this->text, $this->maxLength);
-        }
-
-        $this->content = Html::encode($this->text);
-        $output = parent::run() . $this->buildOembedOutput();
         $this->trigger(self::EVENT_BEFORE_OUTPUT, new ParameterEvent(['output' => &$output]));
 
-        return trim($output);
-
-    }
-
-    /**
-     * @since v1.3.2
-     */
-    protected function parseOutput()
-    {
-        return static::parseMentionings($this->text, $this->edit);
-    }
-
-    /**
-     * @return string truncated and stripped text
-     */
-    protected function renderMinimal() {
-        $result = preg_replace('/\\\\(\n|\r){1,2}/',  ' ', $this->text);
-        $result = strip_tags((new PreviewMarkdown())->parse($result));
-        $result = $this->toUTF8Emoji($result);
-        return  trim(Html::encode(($this->maxLength > 0) ? Helpers::truncateText($result, $this->maxLength) : $result));
-    }
-
-    protected function toUTF8Emoji($text)
-    {
-        // Note the ; was used in the legacy editor
-        return preg_replace_callback('/[:|;](([A-Za-z0-9])+)[:|;]/', function($match)  {
-            $result =  $match[0];
-
-            if(isset($match[1])) {
-                $result = array_key_exists(strtolower($match[1]), EmojiMap::MAP) ?  EmojiMap::MAP[strtolower($match[1])] : $result;
-            }
-
-            return $result;
-        }, $text);
-    }
-
-    /**
-     * @return string html extension holding the actual oembed dom nodes which will be embedded into the rich text
-     */
-    public function buildOembedOutput()
-    {
-        $result = '';
-        foreach ($this->oembeds as $url => $oembed) {
-            $result .= Html::tag('div', $oembed, ['data-oembed' => Html::encode($url)]);
+        foreach (static::getExtensions() as $extension) {
+            $output = $extension->onBeforeOutput($this, $output);
         }
 
-        return Html::tag('div', $result, ['class' => 'richtext-oembed-container', 'style' => 'display:none']);
-    }
+        // Wrap encoded output in root div
+        $this->content = Html::encode($output);
+        $output = parent::run();
 
-    /**
-     * Parses the given text for mentionings and replaces them with possibly updated values (e.g. name).
-     *
-     * @param $text string rich text content to parse
-     * @param $edit bool if not in edit mode deleted or inactive users will be rendered differently
-     * @return mixed
-     */
-    public static function parseMentionings($text, $edit = false)
-    {
-        // $match[0]: markdown, $match[1]: name, $match[2]: extension(mention) $match[3]: guid, $match[4]: url
-        return static::replaceLinkExtension($text, 'mention', function($match) use ($edit) {
-            $contentContainer = ContentContainer::findOne(['guid' => $match[3]]);
-            $notFoundResult = '['.$match[1].'](mention:'.$match[2].' "#")';
+        foreach (static::getExtensions() as $extension) {
+            $output = $extension->onAfterOutput($this, $output);
+        }
 
-            if(!$contentContainer || !$contentContainer->getPolymorphicRelation()) {
-                // If no user or space was found we leave out the url in the non edit mode.
-                return $edit ?  '['.$match[1].'](mention:'.$match[3].' "'.$match[4].'")' : $notFoundResult;
-            }
+        $this->trigger(self::EVENT_AFTER_OUTPUT, new ParameterEvent(['output' => &$output]));
 
-            $container = $contentContainer->getPolymorphicRelation();
-
-            if($container instanceof User) {
-                return $container->isActive()
-                    ?  '['.$container->getDisplayName().'](mention:'.$container->guid.' "'.$container->getUrl().'")'
-                    : $notFoundResult;
-            }
-
-            if($container instanceof Space) {
-                return '['.$container->name.'](mention:'.$container->guid.' "'.$container->getUrl().'")';
-            }
-
-            return '';
-        });
-    }
-
-    /**
-     * Can be used to scan for link extensions of the form [<text>](<extension>:<url> "<title>") in which the actual meaning
-     * of the placeholders is up to the extension itself.
-     *
-     * @param $text string rich text content to parse
-     * @param $extension string|null extension string if not given all extension types will be included
-     * @return array
-     */
-    public static function scanLinkExtension($text, $extension = null)
-    {
-        preg_match_all(static::getLinkExtensionPattern($extension), $text, $match, PREG_SET_ORDER);
-        return $match;
-    }
-
-    /**
-     * Can be used to scan and replace link extensions of the form [<text>](<extension>:<url> "<title>") in which the actual meaning
-     * of the placeholders is up to the extension itself.
-     *
-     * @param $text string rich text content to parse
-     * @param $extension string|null extension string if not given all extension types will be included
-     * @return mixed
-     */
-    public static function replaceLinkExtension($text, $extension = null, $callback)
-    {
-        return preg_replace_callback(static::getLinkExtensionPattern($extension), $callback, $text);
-    }
-
-    /**
-     * @param string $extension the extension to parse, if not set all extensions are included
-     * @return string the regex pattern for a given extension or all extension if no specific extension string is given
-     */
-    protected static function getLinkExtensionPattern($extension = '[a-zA-Z]+')
-    {
-        return '/(?<!\\\\)\[([^\]]*)\]\(('.$extension.'):{1}([^\)\s]*)(?:\s")?([^"]*)?(?:")?[^\)]*\)/is';
-    }
-
-    /**
-     * Checks if the compatibility mode is enabled.
-     * The compatibility mode is only required, if old content is present and won't be activated for new installations.
-     *
-     * @return bool
-     */
-    public function isCompatibilityMode()
-    {
-        return Yii::$app->getModule('content')->settings->get('richtextCompatMode', 1);
+        return trim($output);
     }
 }

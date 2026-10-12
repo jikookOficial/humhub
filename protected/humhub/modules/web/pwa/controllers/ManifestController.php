@@ -10,7 +10,6 @@ namespace humhub\modules\web\pwa\controllers;
 
 use humhub\components\access\ControllerAccess;
 use humhub\components\Controller;
-use humhub\modules\web\pwa\widgets\SiteIcon;
 use humhub\modules\web\Module;
 use Yii;
 use yii\helpers\Url;
@@ -35,13 +34,20 @@ class ManifestController extends Controller
     /**
      * @var array the manifest
      */
-    public $manifest = [];
+    public $manifest = [
+        'gcm_sender_id' => '103953800507',
+    ];
 
 
     public function actionIndex()
     {
         $this->handleIcons();
-        $this->handlePwa();
+
+        /** @var Module $module */
+        $module = Yii::$app->getModule('web');
+        if ($module->enableServiceWorker !== false) {
+            $this->handlePwa();
+        }
 
         return $this->asJson($this->manifest);
     }
@@ -49,7 +55,7 @@ class ManifestController extends Controller
     private function handlePwa()
     {
         $this->manifest['display'] = 'standalone';
-        $this->manifest['start_url'] = Url::home(true);
+        $this->manifest['start_url'] = Url::base(true);
         $this->manifest['short_name'] = Yii::$app->name;
         $this->manifest['name'] = Yii::$app->name;
         $this->manifest['background_color'] = Yii::$app->view->theme->variable('primary');
@@ -61,11 +67,14 @@ class ManifestController extends Controller
         $this->manifest['icons'] = [];
 
         foreach ([48, 72, 96, 192, 512] as $size) {
-            $this->manifest['icons'][] = [
-                'src' => SiteIcon::getUrl($size),
-                'type' => 'image/png',
-                'sizes' => $size . 'x' . $size
-            ];
+            $src = Yii::$app->img->icon->getUrl(['square' => $size]);
+            if (!empty($src)) {
+                $this->manifest['icons'][] = [
+                    'src' => $src,
+                    'type' => 'image/png',
+                    'sizes' => $size . 'x' . $size,
+                ];
+            }
         }
     }
 }

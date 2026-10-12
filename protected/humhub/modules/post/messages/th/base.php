@@ -1,12 +1,14 @@
 <?php
-return array (
-  'Allow others to create new posts on your profile page' => '',
-  'Allows the user to create posts' => '',
-  'Collapse' => 'ย่อ',
-  'Create post' => '',
-  'Edit your post...' => '',
-  'Read full post...' => '',
-  'This space is archived.' => '',
-  'What\'s on your mind?' => '',
-  'post' => '',
-);
+return [
+  'Allow others to create new posts on your profile page' => 'อนุญาตให้ผู้อื่นสร้างโพสต์ใหม่บนหน้าโปรไฟล์ของคุณ',
+  'Allows the user to create posts' => 'อนุญาตให้ผู้ใช้สร้างโพสต์',
+  'Create post' => 'สร้างโพสต์',
+  'Edit your post...' => 'แก้ไขข้อความของคุณ...',
+  'Post' => '',
+  'Post could not be saved!' => '',
+  'The post must not be empty!' => '',
+  'This space is archived.' => 'พื้นที่นี้ถูกเก็บถาวร',
+  'Title' => 'หัวข้อ',
+  'What\'s on your mind?' => 'เธอคิดอะไรอยู่',
+  'post' => 'โพสต์',
+];

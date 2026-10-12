@@ -8,9 +8,13 @@
 
 namespace humhub\libs;
 
+use humhub\helpers\Html;
+use humhub\widgets\bootstrap\Button;
+use Yii;
+use yii\base\Event;
+use yii\base\Model;
 use yii\grid\Column;
 use yii\helpers\Url;
-use humhub\libs\Html;
 
 /**
  * Description of ActionColumn
@@ -19,6 +23,7 @@ use humhub\libs\Html;
  */
 class ActionColumn extends Column
 {
+    public const EVENT_AFTER_INIT_ACTIONS = 'afterInitActions';
 
     /**
      * @var string the ID attribute of the model, to generate action URLs.
@@ -51,16 +56,23 @@ class ActionColumn extends Column
             return '';
         }
 
-        $html = Html::beginTag('div', ['class' => 'btn-group dropdown-navigation']);
-        $html .= Html::button('<i class="fa fa-cog"></i> <span class="caret"></span>', ['class' => 'btn btn-default dropdown-toggle', 'data-toggle' => 'dropdown']);
-        $html .= Html::beginTag('ul', ['class' => 'dropdown-menu pull-right']);
+        $html = Html::beginTag('div', ['class' => 'btn-group dropdown']);
+        $html .= Button::light()
+            ->cssClass('dropdown-toggle')
+            ->options([
+                'aria-label' => Yii::t('base', 'Actions'),
+                'data-bs-toggle' => 'dropdown',
+            ])
+            ->icon('controls')
+            ->loader(false);
+        $html .= Html::beginTag('ul', ['class' => 'dropdown-menu dropdown-menu-end']);
         foreach ($actions as $title => $url) {
             if ($url === '---') {
-                $html .= '<li class="divider"></li>';
+                $html .= '<li><hr class="dropdown-divider"></li>';
             } else {
-                $linkOptions = null;
+                $linkOptions = ['class' => 'dropdown-item'];
                 if (isset($url['linkOptions'])) {
-                    $linkOptions = $url['linkOptions'];
+                    $linkOptions = array_merge($linkOptions, $url['linkOptions']);
                     unset($url['linkOptions']);
                 }
 
@@ -80,18 +92,22 @@ class ActionColumn extends Column
     {
         if ($this->actions === null) {
             return [];
-        } elseif (is_callable($this->actions)) {
+        }
+
+        if (is_callable($this->actions)) {
             return call_user_func($this->actions, $model, $key, $index, $this);
         }
+
+        Event::trigger($this, self::EVENT_AFTER_INIT_ACTIONS);
 
         return $this->actions;
     }
 
     /**
      * Builds the URL for a given Action
-     * 
+     *
      * @param array $url
-     * @param \yii\base\Model $model
+     * @param Model $model
      * @return string the url
      */
     protected function handleUrl($url, $model)

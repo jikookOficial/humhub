@@ -21,21 +21,11 @@ use yii\web\HttpException;
  */
 class IndexController extends Controller
 {
-
     /**
      * @inheritdoc
      */
     public $adminOnly = false;
 
-    /**
-     * @inheritdoc
-     */
-    public function getAccessRules()
-    {
-        return [
-            ['permissions' => Yii::$app->getModule('admin')->getPermissions()]
-        ];
-    }
 
     /**
      * List all available user groups
@@ -47,11 +37,11 @@ class IndexController extends Controller
         /* @var $firstVisible MenuLink */
         $firstVisible = $adminMenu->getFirstEntry(MenuLink::class, true);
 
-        if(!$firstVisible) {
+        if (!$firstVisible) {
             throw new HttpException(403);
         }
 
-		return $this->redirect($firstVisible->getUrl());
+        return $this->redirect($firstVisible->getUrl());
     }
 
 }

@@ -1,12 +1,14 @@
 <?php
-return array (
+return [
   'Allow others to create new posts on your profile page' => '',
   'Allows the user to create posts' => '',
-  'Collapse' => 'Lipat',
   'Create post' => '',
   'Edit your post...' => '',
-  'Read full post...' => '',
+  'Post' => 'Kirim',
+  'Post could not be saved!' => '',
+  'The post must not be empty!' => '',
   'This space is archived.' => 'Ruang ini di arsipkan',
+  'Title' => 'Gelar',
   'What\'s on your mind?' => '',
   'post' => 'Kirim',
-);
+];

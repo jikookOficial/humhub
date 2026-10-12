@@ -8,14 +8,16 @@
 
 namespace humhub\modules\comment\permissions;
 
+use humhub\libs\BasePermission;
 use humhub\modules\space\models\Space;
+use humhub\modules\user\models\User;
+use Yii;
 
 /**
  * CreateComment Permission
  */
-class CreateComment extends \humhub\libs\BasePermission
+class CreateComment extends BasePermission
 {
-
     /**
      * @inheritdoc
      */
@@ -25,6 +27,9 @@ class CreateComment extends \humhub\libs\BasePermission
         Space::USERGROUP_MODERATOR,
         Space::USERGROUP_MEMBER,
         Space::USERGROUP_USER,
+        User::USERGROUP_USER,
+        User::USERGROUP_SELF,
+        User::USERGROUP_FRIEND,
     ];
 
     /**
@@ -32,6 +37,7 @@ class CreateComment extends \humhub\libs\BasePermission
      */
     protected $fixedGroups = [
         Space::USERGROUP_GUEST,
+        User::USERGROUP_GUEST,
     ];
 
     /**
@@ -53,8 +59,8 @@ class CreateComment extends \humhub\libs\BasePermission
     {
         parent::__construct($config);
 
-        $this->title = \Yii::t('CommentModule.permissions', 'Create comment');
-        $this->description = \Yii::t('CommentModule.permissions', 'Allows the user to add comments');
+        $this->title = Yii::t('CommentModule.permissions', 'Create comment');
+        $this->description = Yii::t('CommentModule.permissions', 'Allows the user to add comments');
     }
 
 }

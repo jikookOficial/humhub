@@ -9,6 +9,10 @@
 /* @var $this \humhub\components\View */
 /* @var $pickerClass string */
 /* @var $pickerOptions string */
+
 /* @var $options array */
+
+use humhub\components\View;
+
 ?>
-<?= call_user_func($pickerClass.'::widget', $pickerOptions) ?>
+<?= call_user_func($pickerClass . '::widget', $pickerOptions) ?>

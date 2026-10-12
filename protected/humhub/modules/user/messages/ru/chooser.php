@@ -1,14 +1,18 @@
 <?php
-return array (
-  'Add more...' => 'Добавить больше...',
-  'An unexpected error occurred while loading the result.' => 'Возникла неожиданная ошибка при загрузке результата.',
-  'Load more' => 'Показать еще',
-  'No users found for the given query.' => '',
-  'Please enter at least {n} character' => 'Пожалуйста, введите {n} символов',
-  'Select {n,plural,=1{item} other{items}}' => 'Выберите {n,plural,=1{элемент} other{элементы}}',
-  'Select {n,plural,=1{user} other{users}}' => '',
-  'This field only allows a maximum of {n,plural,=1{# item} other{# items}}.' => 'Доступно выбор максимум из {n,plural,=1{элемента} other{элементов}}',
-  'This field only allows a maximum of {n,plural,=1{# user} other{# users}}.' => '',
-  'You reached the maximum number of allowed charachters ({n}).' => 'Вы достигли максимального количества разрешенных символов ({n})',
-  'Your search returned no matches.' => 'Ничего не найдено.',
-);
+
+return [
+    'Add user' => 'Добавить пользователя',
+    'An unexpected error occurred while loading the result.' => 'При загрузке результата возникла неожиданная ошибка.',
+    'Load more' => 'Показать ещё',
+    'No results found.' => 'Результатов не найдено.',
+    'No users found for the given query.' => 'Пользователей по данному запросу не найдено.',
+    'Please enter at least {n} character' => 'Пожалуйста, введите не менее {n} символов',
+    'Select {n,plural,=1{item} other{items}}' => 'Выберите {n,plural,one{# элемент} few{# элемента} other{# элементов}}',
+    'Select {n,plural,=1{user} other{users}}' => 'Выберите {n,plural,one{# пользователя} other{# пользователей}}',
+    'Select...' => 'Выбрать...',
+    'This field only allows a maximum of {n,plural,=1{# item} other{# items}}.' => 'Это поле поддерживает максимум {n,plural,one{# элемент} few{# элемента} other{# элементов}}',
+    'This field only allows a maximum of {n,plural,=1{# user} other{# users}}.' => 'Это поле поддерживает максимум {n,plural,one{# пользователя} other{# пользователей}}',
+    'You reached the maximum number of allowed characters ({n}).' => 'Вы достигли максимально допустимого числа символов: ({n})',
+    'Your search returned no matches.' => 'Ваш поиск не дал результатов.',
+    'You are not allowed to remove this item.' => '',
+];

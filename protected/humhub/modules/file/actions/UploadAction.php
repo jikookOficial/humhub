@@ -8,16 +8,18 @@
 
 namespace humhub\modules\file\actions;
 
-use humhub\libs\Html;
-use Yii;
-use yii\base\Action;
-use yii\web\UploadedFile;
-use humhub\libs\Helpers;
-use humhub\modules\file\models\FileUpload;
-use humhub\modules\file\libs\FileHelper;
-use humhub\modules\file\models\File;
+use humhub\helpers\DataTypeHelper;
+use humhub\helpers\Html;
 use humhub\modules\content\components\ContentActiveRecord;
 use humhub\modules\content\components\ContentAddonActiveRecord;
+use humhub\modules\file\libs\FileHelper;
+use humhub\modules\file\libs\ImageHelper;
+use humhub\modules\file\models\File;
+use humhub\modules\file\models\FileUpload;
+use Yii;
+use yii\base\Action;
+use yii\db\ActiveRecord;
+use yii\web\UploadedFile;
 
 /**
  * UploadAction provides an Ajax/JSON way to upload new files
@@ -27,7 +29,6 @@ use humhub\modules\content\components\ContentAddonActiveRecord;
  */
 class UploadAction extends Action
 {
-
     /**
      * The record to whom this files belongs to.
      * Optional, since "free" files can also attached to a record later.
@@ -88,7 +89,7 @@ class UploadAction extends Action
 
         $file->setUploadedFile($uploadedFile);
 
-        if($hideInStream) {
+        if ($hideInStream) {
             $file->show_in_stream = false;
         }
 
@@ -96,6 +97,7 @@ class UploadAction extends Action
             if ($this->record !== null) {
                 $this->record->fileManager->attach($file);
             }
+            $this->afterFileUpload($file);
             return array_merge(['error' => false], FileHelper::getFileInfos($file));
         } else {
             return $this->getErrorResponse($file);
@@ -105,6 +107,18 @@ class UploadAction extends Action
     protected function isHideInStreamRequest()
     {
         return (Yii::$app->request->post('hideInStream') == 1) || (Yii::$app->request->get('hideInStream') == 1);
+    }
+
+
+    /**
+     * Is called after a file has been successfully uploaded and saved.
+     *
+     * @param File $file
+     * @since 1.7
+     */
+    protected function afterFileUpload(File $file)
+    {
+        ImageHelper::downscaleImage($file);
     }
 
     /**
@@ -122,8 +136,8 @@ class UploadAction extends Action
         }
 
 
-        if ($model != '' && $pk != '' && Helpers::CheckClassType($model, \yii\db\ActiveRecord::class)) {
-
+        /** @var ActiveRecord|string $model */
+        if ($model != '' && $pk != '' && $model = DataTypeHelper::matchClassType($model, ActiveRecord::class, true)) {
             $record = $model::findOne(['id' => $pk]);
             if ($record !== null && ($record instanceof ContentActiveRecord || $record instanceof ContentAddonActiveRecord)) {
                 if ($record->content->canEdit()) {
@@ -150,8 +164,8 @@ class UploadAction extends Action
         return [
             'error' => true,
             'errors' => $errorMessage,
-            'name' =>  Html::encode($file->file_name),
-            'size' =>  Html::encode($file->size)
+            'name' => Html::encode($file->file_name),
+            'size' => Html::encode($file->size),
         ];
     }
 

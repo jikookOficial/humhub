@@ -15,8 +15,6 @@
  *
  */
 humhub.module('stream.StreamEntry', function (module, require, $) {
-
-    var util = require('util');
     var client = require('client');
     var contentModule = require('content');
     var Content = contentModule.Content;
@@ -25,6 +23,7 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
     var modal = require('ui.modal');
     var additions = require('ui.additions');
     var streamModule = require('stream');
+    var i18n = require('i18n');
 
     /**
      * Represents a single stream entry within a stream.
@@ -76,7 +75,6 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
         promise.then(function ($confirm) {
             if ($confirm) {
                 that.$.remove(); // Make sure to remove the wallentry node.
-                streamModule.log.success('success.delete');
             }
         }).catch(function (err) {
             module.log.error(err, true);
@@ -89,9 +87,11 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
      * Reloads this stream entry
      */
     StreamEntry.prototype.reload = function () {
-        return this.stream().reloadEntry(this).catch(function (err) {
-            module.log.error(err, true);
-        });
+        if (typeof this.stream() !== 'undefined') {
+            return this.stream().reloadEntry(this).catch(function (err) {
+                module.log.error(err, true);
+            });
+        }
     };
 
     /**
@@ -99,11 +99,11 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
      * @param evt
      */
     StreamEntry.prototype.edit = function (evt) {
-
-        var that = this;
+        const that = this;
+        const data = {viewContext: that.data('viewContext')};
 
         that.loader();
-        client.html(evt).then(function (response) {
+        client.html(evt, {data}).then(function (response) {
             that.$.find('.stream-entry-edit-link').hide();
             that.$.find('.stream-entry-cancel-edit-link').show();
             that.setEditContent(response.html);
@@ -194,8 +194,9 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
             dataType: 'html',
         }).status({
             200: function (response) {
-                that.$.html(response.html);
-                streamModule.log.success('success.edit');
+                const updatedEntry = $(response.html)
+                that.$.replaceWith(updatedEntry);
+                that.$ = updatedEntry;
                 that.apply();
                 that.highlight();
             },
@@ -223,12 +224,12 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
         var $loader = this.$.find('.stream-entry-loader');
         if ($show === false) {
             loader.reset($loader);
-            this.$.find('.wallentry-labels').show();
+            this.$.find('.wallentry-badges').show();
             this.$.find('.preferences').show();
             return;
         }
 
-        this.$.find('.wallentry-labels').hide();
+        this.$.find('.wallentry-badges').hide();
         this.$.find('.preferences').hide();
         loader.set($loader, {
             'position': 'left',
@@ -241,16 +242,15 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
     };
 
     /**
-     * Changes the visibility (private/public) of this entry
+     * Update content record by action provided in action URL from attribute [data-action-url]
      * @param evt
      */
-    StreamEntry.prototype.toggleVisibility = function (evt) {
+    var updateContentByActionUrl = function (evt) {
         this.loader();
         var that = this;
         client.post(evt).then(function (response) {
             if (response.success) {
                 that.reload();
-                streamModule.log.success('saved');
             } else {
                 module.log.error(response, true);
                 that.loader(false);
@@ -259,6 +259,28 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
             that.loader(false);
             module.log.error(e, true);
         });
+    };
+
+    /**
+     * Changes the visibility (private/public) of this entry
+     * @param evt
+     */
+    StreamEntry.prototype.toggleVisibility = updateContentByActionUrl;
+
+    /**
+     * Lock comments for the content
+     * @param evt
+     */
+    StreamEntry.prototype.lockComments = updateContentByActionUrl;
+
+    /**
+     * Unlock comments for the content
+     * @param evt
+     */
+    StreamEntry.prototype.unlockComments = updateContentByActionUrl;
+
+    StreamEntry.prototype.isPinned = function (evt) {
+        return this.$.is('[data-stream-pinned="1"]');
     };
 
     /**
@@ -295,6 +317,26 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
         this.loader();
         client.post(evt.url).then(function () {
             that.stream().init();
+        }).catch(function (e) {
+            module.log.error(e, true);
+            that.loader(false);
+        });
+    };
+
+    /**
+     * Publish draft of this entry from the top of the stream.
+     * @param evt
+     */
+    StreamEntry.prototype.publishDraft = function (evt) {
+        var that = this;
+        this.loader();
+        client.post(evt.url).then(function (data) {
+            that.reload();
+            if (data.success) {
+                module.log.info(data.message, true);
+            } else {
+                module.log.error(data.error, true);
+            }
         }).catch(function (e) {
             module.log.error(e, true);
             that.loader(false);
@@ -340,13 +382,13 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
         client.post(evt.url).then(function (response) {
             if (response.success) {
                 // Either just remove entry or reload it in case the stream includes archived entries
-                if (that.stream().filter.isActive('entry_archived')) {
+                if (typeof that.stream().filter === 'undefined' || that.stream().filter.isActive('entry_archived')) {
                     that.reload().then(function () {
-                        streamModule.log.success('success.archive', true);
+                        streamModule.log.success(i18n.t('ContentModule.base', 'The content has been archived.'), true);
                     });
                 } else {
                     that.remove().then(function () {
-                        streamModule.log.success('success.archive', true);
+                        streamModule.log.success(i18n.t('ContentModule.base', 'The content has been archived.'), true);
                     });
                 }
             } else {
@@ -369,7 +411,7 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
         client.post(evt.url).then(function (response) {
             if (response.success) {
                 that.reload().then(function () {
-                    streamModule.log.success('success.unarchive', true);
+                    streamModule.log.success(i18n.t('ContentModule.base', 'The content has been unarchived.'), true);
                 }).catch(function (err) {
                     streamModule.log.error('error.default', true);
                 });
@@ -377,6 +419,21 @@ humhub.module('stream.StreamEntry', function (module, require, $) {
         }).catch(function (e) {
             module.log.error('Unexpected error', e, true);
             that.loader(false);
+        });
+    };
+
+    StreamEntry.prototype.scheduleOptions = function (evt) {
+        const that = this;
+        modal.post(evt).then(function () {
+            modal.global.$.one('submitted', function () {
+                if ($(this).find('.is-invalid').length) {
+                    return;
+                }
+                modal.global.close(true);
+                that.reload();
+            });
+        }).catch(function (e) {
+            module.log.error(e, true);
         });
     };
 

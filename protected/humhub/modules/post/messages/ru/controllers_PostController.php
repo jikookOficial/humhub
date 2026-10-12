@@ -1,4 +1,4 @@
-<?php
+<?php /* Translated by Paul (https://paul.bid) www.paul.bid@gmail.com */
 return array (
-  'Access denied!' => 'Доступ запрещен!',
+  'Access denied!' => 'Доступ запрещён!',
 );

@@ -8,6 +8,7 @@
 
 namespace humhub\modules\dashboard;
 
+use humhub\helpers\ControllerHelper;
 use humhub\modules\ui\menu\MenuLink;
 use humhub\widgets\TopMenu;
 use Yii;
@@ -20,12 +21,11 @@ use yii\base\Event;
  */
 class Events
 {
-
     /**
      * TopMenu init event callback
      *
-     * @see TopMenu
      * @param Event $event
+     * @see TopMenu
      */
     public static function onTopMenuInit($event)
     {
@@ -36,10 +36,9 @@ class Events
             'id' => 'dashboard',
             'label' => Yii::t('DashboardModule.base', 'Dashboard'),
             'url' => ['/dashboard/dashboard'],
-            'icon' => 'tachometer',
+            'icon' => 'dashboard',
             'sortOrder' => 100,
-            'isActive' => MenuLink::isActiveState('dashboard')
+            'isActive' => ControllerHelper::isActivePath('dashboard'),
         ]));
     }
-
 }

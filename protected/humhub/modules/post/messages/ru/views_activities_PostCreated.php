@@ -1,5 +1,5 @@
-<?php
+<?php /* Translated by Paul (https://paul.bid) www.paul.bid@gmail.com */
 return array (
-  '{displayName} created a new post.' => '{displayName} создает новый пост.',
-  '{displayName} created a new {contentTitle}.' => '{displayName} создает новый пост {contentTitle}.',
+  '{displayName} created a new post.' => 'Пользователь {displayName} опубликовал новую запись.',
+  '{displayName} created a new {contentTitle}.' => 'Пользователь {displayName} опубликовал {contentTitle}.',
 );

@@ -8,12 +8,9 @@
 
 namespace humhub\modules\space\notifications;
 
-use humhub\modules\space\models\Membership;
-use humhub\modules\user\models\User;
-use Yii;
-use yii\bootstrap\Html;
+use humhub\helpers\Html;
 use humhub\modules\notification\components\BaseNotification;
-
+use Yii;
 
 /**
  * SpaceInviteDeclinedNotification is sent to the originator of the invite to
@@ -24,7 +21,6 @@ use humhub\modules\notification\components\BaseNotification;
  */
 class InviteRevoked extends BaseNotification
 {
-
     /**
      * @inheritdoc
      */
@@ -36,15 +32,15 @@ class InviteRevoked extends BaseNotification
     public $viewName = 'inviteDeclined';
 
     /**
-     *  @inheritdoc
+     * @inheritdoc
      */
     public function category()
     {
-        return new SpaceMemberNotificationCategory;
+        return new SpaceMemberNotificationCategory();
     }
 
     /**
-     *  @inheritdoc
+     * @inheritdoc
      */
     public function getSpace()
     {
@@ -53,7 +49,7 @@ class InviteRevoked extends BaseNotification
 
     public function getMailSubject()
     {
-        return strip_tags($this->html());
+        return $this->getInfoText($this->originator->displayName, $this->getSpace()->name);
     }
 
     /**
@@ -61,10 +57,17 @@ class InviteRevoked extends BaseNotification
      */
     public function html()
     {
-        return Yii::t('SpaceModule.notification', '{displayName} revoked your invitation for the space {spaceName}', [
-            '{displayName}' => Html::tag('strong', Html::encode($this->originator->displayName)),
-            '{spaceName}' => Html::tag('strong', Html::encode($this->getSpace()->name))
-        ]);
+        return $this->getInfoText(
+            Html::tag('strong', Html::encode($this->originator->displayName)),
+            Html::tag('strong', Html::encode($this->getSpace()->name)),
+        );
     }
 
+    private function getInfoText($displayName, $spaceName)
+    {
+        return Yii::t('SpaceModule.notification', '{displayName} revoked your invitation for the space {spaceName}', [
+            '{displayName}' => $displayName,
+            '{spaceName}' => $spaceName,
+        ]);
+    }
 }

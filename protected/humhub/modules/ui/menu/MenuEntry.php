@@ -8,10 +8,9 @@
 
 namespace humhub\modules\ui\menu;
 
+use humhub\helpers\Html;
 use humhub\modules\ui\menu\widgets\Menu;
-use Yii;
 use yii\base\BaseObject;
-use yii\bootstrap\Html;
 
 /**
  * Class MenuEntry
@@ -29,7 +28,7 @@ abstract class MenuEntry extends BaseObject
     protected $id;
 
     /**
-     * @var int the sort order
+     * @var int the sort order. a value between 0 and 10000
      */
     protected $sortOrder;
 
@@ -39,9 +38,9 @@ abstract class MenuEntry extends BaseObject
     protected $htmlOptions = [];
 
     /**
-     * @var bool
+     * @var bool|null
      */
-    protected $isVisible = true;
+    protected $isVisible = null;
 
     /**
      * @var bool mark this entry as active
@@ -69,8 +68,9 @@ abstract class MenuEntry extends BaseObject
      * @param array $extraHtmlOptions
      * @return string
      */
-    public function render($extraHtmlOptions = []) {
-        if(!$this->isVisible) {
+    public function render($extraHtmlOptions = [])
+    {
+        if (!$this->isVisible()) {
             return '';
         }
 
@@ -78,7 +78,7 @@ abstract class MenuEntry extends BaseObject
     }
 
     /**
-     * @return boolean is active
+     * @return bool is active
      */
     public function getIsActive()
     {
@@ -94,7 +94,7 @@ abstract class MenuEntry extends BaseObject
     }
 
     /**
-     * @param $state boolean
+     * @param $state bool
      * @return static
      */
     public function setIsActive($state)
@@ -102,49 +102,6 @@ abstract class MenuEntry extends BaseObject
         $this->isActive = $state;
         return $this;
     }
-
-    /**
-     * Activates this MenuEntry in case the given moduleId, controllerId and actionId matches the current request.
-     * @param string $moduleId controller module id
-     * @param array|string $controllerIds controller id
-     * @param array|string $actionIds action id
-     * @return static
-     */
-    public function setIsActiveState($moduleId, $controllerIds = [], $actionIds = [])
-    {
-        $this->isActive = static::isActiveState($moduleId,$controllerIds,$actionIds);
-        return $this;
-    }
-
-    public static function isActiveState($moduleId = null, $controllerIds = [], $actionIds = [])
-    {
-         if($moduleId && (!Yii::$app->controller->module || Yii::$app->controller->module->id !== $moduleId)) {
-            return false;
-        }
-
-        if(empty($controllerIds) && empty($actionIds)) {
-            return true;
-        }
-
-        if($controllerIds && !is_array($controllerIds)) {
-            $controllerIds = [$controllerIds];
-        }
-
-        if(!empty($controllerIds) && !in_array(Yii::$app->controller->id, $controllerIds)) {
-            return false;
-        }
-
-        if($actionIds && !is_array($actionIds)) {
-            $actionIds = [$actionIds];
-        }
-
-        if(!empty($actionIds) && !in_array(Yii::$app->controller->action->id, $actionIds)) {
-            return false;
-        }
-
-        return true;
-    }
-
 
     /**
      * @param $id string the id
@@ -183,11 +140,11 @@ abstract class MenuEntry extends BaseObject
     {
         $options = $this->htmlOptions;
 
-        if(isset($extraOptions['class'])) {
+        if (isset($extraOptions['class'])) {
             Html::addCssClass($options, $extraOptions['class']);
         }
 
-        if(isset($extraOptions['style'])) {
+        if (isset($extraOptions['style'])) {
             Html::addCssStyle($options, $extraOptions['style']);
         }
 
@@ -195,7 +152,7 @@ abstract class MenuEntry extends BaseObject
             Html::addCssClass($options, 'active');
         }
 
-        if($this->getId()) {
+        if ($this->getId()) {
             $options['data-menu-id'] = $this->id;
         }
 
@@ -217,7 +174,7 @@ abstract class MenuEntry extends BaseObject
      */
     public function isVisible()
     {
-        return $this->isVisible;
+        return !($this->isVisible === false);
     }
 
     /**
@@ -228,6 +185,17 @@ abstract class MenuEntry extends BaseObject
     {
         $this->isVisible = $isVisible;
         return $this;
+    }
+
+    /**
+     * Checks whether the visibility of the menu entry was explicitly set.
+     *
+     * @return bool
+     * @since 1.8
+     */
+    public function isVisibilitySet()
+    {
+        return ($this->isVisible !== null);
     }
 
     /**
@@ -246,5 +214,14 @@ abstract class MenuEntry extends BaseObject
     {
         $this->sortOrder = $sortOrder;
         return $this;
+    }
+
+    /**
+     * @return string the class name of this entry can be used to identify the entry if no id is given
+     * @since 1.7
+     */
+    public function getEntryClass()
+    {
+        return static::class;
     }
 }
